@@ -91,7 +91,7 @@ function row(r) {
   </tr>`;
 }
 
-fetch("results.json", { cache: "no-store" }).then(r => r.json()).then(t => {
+fetch("results.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json()).then(t => {
   const count = (k, s) => t.servers.filter(r => r[k] === s).length;
   const reached = t.servers.filter(r => r.range).length;
   const parts = [`${count("complete", "pass")} of ${reached} servers we could reach sent exactly what the blocks contain`];
