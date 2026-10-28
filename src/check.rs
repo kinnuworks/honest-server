@@ -81,9 +81,23 @@ impl Reference {
         self.peers.iter().map(|p| format!("{} ({})", p.user_agent, p.start_height)).collect()
     }
 
+    /// Peers drop idle connections, so reconnect when fewer than three are left.
+    async fn top_up(&mut self) {
+        if self.peers.len() >= 3 {
+            return;
+        }
+        let have: Vec<_> = self.peers.iter().map(|p| p.addr).collect();
+        for p in p2p::connect_peers(6, 170_190).await {
+            if !have.contains(&p.addr) {
+                self.peers.push(p);
+            }
+        }
+    }
+
     /// Fetches the blocks with these hashes from at least two peers. A block
     /// counts as verified when two peers serve it and it passes every check.
     async fn fetch(&mut self, wanted: &[(u64, [u8; 32])]) {
+        self.top_up().await;
         let todo: Vec<(u64, [u8; 32])> =
             wanted.iter().filter(|(_, h)| !self.cache.contains_key(h)).cloned().collect();
         if todo.is_empty() {
@@ -142,6 +156,7 @@ impl Reference {
     /// Walks the peers' header chain forward from `from` and returns the
     /// height and hash of the last header they agree on.
     async fn tip_after(&mut self, from_height: u64, from_hash: [u8; 32]) -> Option<(u64, [u8; 32])> {
+        self.top_up().await;
         let mut best: Option<(u64, [u8; 32])> = None;
         let mut confirmations = 0;
         for peer in self.peers.iter_mut() {

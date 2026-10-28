@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Honest Server</title>
+<meta name="description" content="Checks Zcash light-wallet servers against full blocks taken straight from Zcash peers.">
+<style>
+  body { font-family: system-ui, sans-serif; margin: 0 auto; max-width: 1100px; padding: 16px; line-height: 1.45; color: #111; background: #fff; }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; }
+  th, td { border-bottom: 1px solid #ddd; padding: 6px 8px; text-align: left; vertical-align: top; }
+  th { font-weight: 600; }
+  .pass { color: #0a6b2d; font-weight: 600; }
+  .fail { color: #b00020; font-weight: 600; }
+  .unverified { color: #666; }
+  .small { font-size: 13px; color: #444; }
+  code, pre { font-family: ui-monospace, monospace; font-size: 13px; }
+  pre { background: #f4f4f4; padding: 10px; overflow-x: auto; }
+  .scroll { overflow-x: auto; }
+  .box { border: 1px solid #ccc; padding: 12px; margin: 12px 0; }
+</style>
+</head>
+<body>
+<h1>Honest Server</h1>
+<p><strong>Catch light servers that lie.</strong></p>
+<p>A Zcash light wallet takes its server's word for every shielded note it receives, and it can't check. Honest Server checks the public servers against full blocks taken straight from Zcash peers.</p>
+
+<p id="summary">Loading the latest check...</p>
+
+<h2>What a lying server looks like</h2>
+<div id="test" class="box">Loading...</div>
+
+<h2>Public servers</h2>
+<p id="status" class="small"></p>
+<div class="scroll">
+<table>
+  <thead>
+    <tr><th>Server</th><th>Complete</th><th>Current</th><th>NU7</th><th>What was checked</th><th>Software</th></tr>
+  </thead>
+  <tbody id="rows"></tbody>
+</table>
+</div>
+
+<h2>Check your own server</h2>
+<p>The table above checks from our machine, over Tor. To test what your server sends to you, run the check on your own computer. It talks only to your server and to Zcash peers, and sends nothing to us.</p>
+<pre>cargo install --git https://github.com/kinnuworks/honest-server
+honest-server check zec.rocks:443</pre>
+
+<h2>How it works</h2>
+<ol>
+  <li>It reads the server's info, its latest block and a range of recent blocks, the same calls a wallet makes when it syncs.</li>
+  <li>It fetches the same blocks from Zcash peer-to-peer nodes and checks each one: Equihash proof of work, the difficulty target, the merkle root over the transaction IDs and the height in the coinbase. Two peers have to serve the same block.</li>
+  <li>It compares every Sapling spend and output and every Orchard and Ironwood action, by transaction and position: nullifiers, note commitments, ephemeral keys and the first 52 bytes of each ciphertext.</li>
+  <li>It walks the peers' headers forward from the server's last block to see whether the server is behind or on a fork, and reads which node release the server runs.</li>
+</ol>
+
+<h2>What it can't see</h2>
+<p>It checks a window of recent blocks, not the whole chain. It can't see what a server logs about the wallets that connect to it, and it doesn't test transaction submission. When it can't reach a server or two peers can't confirm a block, it says "couldn't verify" and doesn't count that as a failure.</p>
+
+<p class="small">Zebra 6.4 nodes stop at block 3,540,768. NU7 activates at block 3,543,405. Servers whose node isn't upgraded will stop or fork off around then.</p>
+
+<script>
+const label = { pass: "Pass", fail: "Fail", unverified: "Couldn't verify" };
+const mark = s => `<span class="${s}">${label[s]}</span>`;
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const n = x => Number(x).toLocaleString("en-US");
+const when = t => new Date(t * 1000).toISOString().replace("T", " ").slice(0, 16) + " UTC";
+
+function checked(r) {
+  if (!r.range) return "";
+  const t = r.tally;
+  return `Blocks ${n(r.range[0])} to ${n(r.range[1])}: ${n(t.shielded_txs)} shielded transactions, ${n(t.commitments)} note commitments and ${n(t.nullifiers)} nullifiers matched`;
+}
+
+function notes(r) {
+  const lines = r.notes.map(esc);
+  for (const m of r.mismatches.slice(0, 5)) lines.push(`Block ${n(m.height)}, transaction ${esc(m.txid.slice(0, 16))}...: ${esc(m.what)}`);
+  if (r.mismatches.length > 5) lines.push(`and ${r.mismatches.length - 5} more`);
+  return lines.length ? `<div class="small">${lines.join("<br>")}</div>` : "";
+}
+
+function row(r) {
+  const tip = r.network_tip ? `<div class="small">tip ${n(r.server_tip)}, network ${n(r.network_tip)}</div>` : "";
+  return `<tr>
+    <td><code>${esc(r.server)}</code>${notes(r)}</td>
+    <td>${mark(r.complete)}</td>
+    <td>${mark(r.current)}${tip}</td>
+    <td>${mark(r.nu7)}</td>
+    <td class="small">${checked(r)}</td>
+    <td class="small">${esc(r.info.software)}${r.info.node ? "<br>" + esc(r.info.node) : ""}</td>
+  </tr>`;
+}
+
+fetch("results.json", { cache: "no-store" }).then(r => r.json()).then(t => {
+  const count = (k, s) => t.servers.filter(r => r[k] === s).length;
+  const reached = t.servers.filter(r => r.range).length;
+  const parts = [`${count("complete", "pass")} of ${reached} servers we could reach sent exactly what the blocks contain`];
+  if (count("complete", "fail")) parts.push(`${count("complete", "fail")} sent something different`);
+  if (count("current", "fail")) parts.push(`${count("current", "fail")} are behind the network`);
+  if (count("nu7", "fail")) parts.push(`${count("nu7", "fail")} run a node that won't follow NU7`);
+  if (t.servers.length - reached) parts.push(`${t.servers.length - reached} couldn't be checked`);
+  document.getElementById("summary").innerHTML = `<strong>${parts.join(". ")}.</strong> Last checked ${when(t.generated_at)}.`;
+  document.getElementById("status").textContent =
+    `${t.servers.length} servers, ${t.blocks_per_check} recent blocks each, probed over Tor. ` +
+    `Reference blocks came from ${t.peers.length} Zcash peers.`;
+  // Problems first, then servers we couldn't check, then passes.
+  const rank = r => (r.complete === "fail" || r.current === "fail" || r.nu7 === "fail") ? 0 : (r.range ? 2 : 1);
+  const sorted = [...t.servers].sort((a, b) => rank(a) - rank(b));
+  document.getElementById("rows").innerHTML = sorted.map(row).join("");
+  const x = t.test;
+  if (!x) { document.getElementById("test").textContent = "No test row in this run."; return; }
+  const m = x.mismatches[0];
+  document.getElementById("test").innerHTML = `
+    <p>This test server sends real blocks from a public server with one shielded note removed, and patches the note commitment tree sizes to match. It is a test row, not a real server.</p>
+    <p>A check that only looks at the server's own answers: ${mark(x.consistency_only.status)} (${esc(x.consistency_only.detail)}).</p>
+    <p>Honest Server: ${mark(x.complete)}${m ? `. Block ${n(m.height)}, transaction ${esc(m.txid.slice(0, 16))}...: ${esc(m.what)}.` : ""}</p>`;
+}).catch(() => {
+  document.getElementById("status").textContent = "Couldn't load the latest results.";
+});
+</script>
+</body>
+</html>

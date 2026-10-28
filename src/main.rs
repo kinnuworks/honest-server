@@ -33,6 +33,8 @@ enum Cmd {
         #[arg(long)]
         json: bool,
     },
+    /// List the Zcash peers the reference blocks would come from.
+    Peers,
     /// Check a list of servers and write the public table as JSON.
     Table {
         /// File with one host:port per line ("# label" comments allowed)
@@ -75,6 +77,14 @@ async fn main() -> Result<()> {
             if r.complete == Status::Fail || r.current == Status::Fail {
                 std::process::exit(2);
             }
+        }
+        Cmd::Peers => {
+            let all = p2p::connect_peers(30, 0).await;
+            for p in &all {
+                let ready = if p.version >= 170_190 { "NU7-ready" } else { "not NU7-ready" };
+                println!("{} {} protocol {} height {} ({ready})", p.addr, p.user_agent, p.version, p.start_height);
+            }
+            println!("{} peers answered", all.len());
         }
         Cmd::Table { servers, out, blocks, tor } => {
             let route = tor.map(Route::Tor).unwrap_or(Route::Direct);
