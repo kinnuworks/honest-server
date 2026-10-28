@@ -65,7 +65,7 @@
     <div class="ui-hero__stage">
       <figure class="ui-window ui-frame" id="test">
         <span class="ui-frame__caption">[ fig. 1 · what a lying server looks like ]</span>
-        <div class="ui-window__bar"><span class="ui-window__title">test server · one note removed</span><span class="ui-window__end"><span class="ui-pill ui-pill--plain">Test row</span></span></div>
+        <div class="ui-window__bar"><span class="ui-window__title">test server · one note removed</span><span class="ui-window__end"><span class="ui-pill ui-pill--plain">Simulated</span></span></div>
         <div class="ui-window__body" id="test-body">
           <div class="ui-state ui-state--loading"><p class="ui-state__body">Loading the latest check...</p></div>
         </div>
@@ -160,13 +160,13 @@ function renderTest(t) {
   const m = x.mismatches[0];
   const s = t.selftest && t.selftest.report;
   $("test-body").innerHTML = `
-    <p>This test server sends real blocks from a public server with one shielded note removed, and patches the note commitment tree sizes to match. It is a test row, not a real server.</p>
+    <p>This simulated server sends real blocks from a public server with one shielded note removed (from Ironwood, Sapling or Orchard, Zcash's shielded pools), and patches the note commitment tree sizes to match. It is a test row, not a real server.</p>
     ${units(x, m)}
     <div class="ui-table-wrap"><table class="ui-table verdicts">
       <thead><tr><th>Check</th><th>Verdict</th><th>What it saw</th></tr></thead>
       <tbody>
-        <tr data-reveal style="--i:25"><td>A check that only looks at the server's own answers</td><td>${pill(x.consistency_only.status)}</td><td>${esc(x.consistency_only.detail)}</td></tr>
-        <tr data-reveal style="--i:26" class="caught"><td><strong>Honest Server</strong></td><td>${pill(x.complete)}</td><td class="evidence">${m ? `Block ${n(m.height)}, transaction ${esc(m.txid.slice(0, 16))}...: <strong>${esc(m.what)}</strong>` : ""}</td></tr>
+        <tr data-reveal style="--i:25"><td>A check that only looks at the server's own answers</td><td>${x.consistency_only.status === "pass" ? '<span class="ui-pill ui-pill--ok">Looks fine</span>' : pill(x.consistency_only.status)}</td><td>${esc(x.consistency_only.detail)}</td></tr>
+        <tr data-reveal style="--i:26" class="caught"><td><strong>Honest Server</strong></td><td>${x.complete === "fail" ? '<span class="ui-pill ui-pill--bad">Lie caught</span>' : pill(x.complete)}</td><td class="evidence">${m ? `Block ${n(m.height)}, transaction ${esc(m.txid.slice(0, 16))}...: <strong>${esc(m.what)}</strong>` : ""}</td></tr>
       </tbody>
     </table></div>
     ${s ? `<p class="muted">Self-test on the same live data: ${n(s.tried)} single changes to ${n(s.blocks)} real blocks (a flipped byte in every nullifier, note commitment, ephemeral key, ciphertext and txid; every note and transaction dropped, moved or reordered; fake notes and transactions added). ${n(s.caught)} caught.</p>` : ""}`;
@@ -192,11 +192,11 @@ function renderServers(t) {
   if (!S.length) { $("servers-body").innerHTML = `<div class="ui-state"><p class="ui-state__body">No servers in this run.</p></div>`; return; }
   const count = (k, s) => S.filter(r => r[k] === s).length;
   const reached = S.filter(r => r.range).length;
-  const parts = [`${count("complete", "pass")} of ${reached} servers we could reach sent exactly what the blocks contain`];
+  const parts = [`${S.length} servers checked`, `${count("complete", "pass")} sent exactly what the blocks contain`];
   if (count("complete", "fail")) parts.push(`${count("complete", "fail")} sent something different`);
   if (count("current", "fail")) parts.push(`${count("current", "fail")} are behind the network`);
-  if (count("nu7", "fail")) parts.push(`${count("nu7", "fail")} run a node that won't follow NU7`);
-  if (S.length - reached) parts.push(`${S.length - reached} couldn't be checked`);
+  if (count("nu7", "fail")) parts.push(`${count("nu7", "fail")} of them runs a node that will stop at NU7, the network upgrade at block 3,543,405`);
+  if (S.length - reached) parts.push(`${S.length - reached} couldn't be reached`);
   $("summary").innerHTML = `<strong>${parts.join(". ")}.</strong> Last checked ${when(t.generated_at)}.`;
   $("status").textContent = `${S.length} servers, ${t.blocks_per_check} recent blocks each, probed over Tor.`;
   const rank = r => (r.complete === "fail" || r.current === "fail" || r.nu7 === "fail") ? 0 : (r.range ? 2 : 1);

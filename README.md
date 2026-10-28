@@ -20,7 +20,7 @@ honest-server check zec.rocks:443 --test-drop-note
 
 The first command checks the server for real. The second takes the same real data, removes one shielded note and patches the tree sizes so the chain still adds up, then shows that Honest Server catches it.
 
-`honest-server selftest zec.rocks:443` goes further: it makes every single change it can to the server's real blocks and counts how many the check catches. On 24 mainnet blocks from zec.rocks (3,533,7xx, Oct 28 2026) it tried 1,034 changes across Sapling, Orchard and Ironwood and caught all 1,034.
+`honest-server selftest zec.rocks:443` goes further: it makes every single change it can to the server's real blocks and counts how many the check catches. The live page shows the latest run: on 24 mainnet blocks from zec.rocks on Oct 28 2026 it tried 1,035 changes across Sapling, Orchard and Ironwood (Zcash's three shielded pools) and caught all 1,035.
 
 ## What it checks
 
@@ -28,7 +28,7 @@ For each server, over a window of recent blocks (24 by default):
 
 - **Complete.** Every Sapling spend and output and every Orchard and Ironwood action the block contains is in the server's compact block, at the same transaction and position, with the same nullifier, note commitment, ephemeral key and first 52 bytes of ciphertext. Nothing extra appears.
 - **Current.** The server's tip matches the chain the peers follow. A server behind by more than three blocks, or on a fork, fails.
-- **NU7.** The server's node follows the NU7 upgrade at block 3,543,405. Zebra 6.4 nodes stop at block 3,540,768, and nodes that aren't upgraded fork off at NU7.
+- **NU7.** The server's node follows NU7, the next Zcash network upgrade, at block 3,543,405. Zebra 6.4 nodes stop at block 3,540,768, and nodes that aren't upgraded fork off at NU7.
 
 Anything it can't confirm shows as "couldn't verify", never as a failure: a server it can't reach, a block two peers won't serve, a server that doesn't say which node it runs.
 
