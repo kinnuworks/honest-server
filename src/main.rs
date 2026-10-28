@@ -57,6 +57,9 @@ enum Cmd {
         /// Connect to the server directly, without Tor
         #[arg(long)]
         direct: bool,
+        /// Reach Zcash peers directly even when the server is reached over Tor
+        #[arg(long)]
+        direct_peers: bool,
         /// Check every block within this many blocks of the tip
         #[arg(long, default_value_t = 100)]
         window: u64,
@@ -137,7 +140,10 @@ async fn main() -> Result<()> {
                 eprintln!("{e}");
                 std::process::exit(3);
             }
-            eprintln!("Connecting to Zcash peers...");
+            if let Route::Tor(t) = &route {
+                p2p::use_tor(t);
+            }
+            eprintln!("Connecting to Zcash peers{}...", if p2p::over_tor() { " over Tor" } else { "" });
             let mut reference = Reference::new(4).await?;
             eprintln!("Checking {server}...");
             let r = if test_drop_note {
@@ -176,7 +182,7 @@ async fn main() -> Result<()> {
                 None => anyhow::bail!("couldn't get verified blocks from {server}"),
             }
         }
-        Cmd::Proxy { server, listen, tor, direct, window, history, sample, strict, test_drop_note } => {
+        Cmd::Proxy { server, listen, tor, direct, direct_peers, window, history, sample, strict, test_drop_note } => {
             // Tor by default: use the given proxy, or a local Tor if one is running.
             let route = if direct {
                 Route::Direct
@@ -189,9 +195,9 @@ async fn main() -> Result<()> {
                 Route::Direct
             };
             if sample > 0 {
-                // Peers are reached directly (Tor exits don't carry port 8233), so
-                // fetching the wallet's older blocks shows peers roughly which heights it syncs.
-                eprintln!("Spot-checking about one in {sample} older blocks. Zcash peers will see which older heights this machine fetches.");
+                // Fetching the wallet's older blocks shows peers roughly which
+                // heights it syncs, even when they only see a Tor exit.
+                eprintln!("Spot-checking about one in {sample} older blocks. Zcash peers will see which older heights are fetched.");
             }
             let upstream = match lwd::connect(&server, &route).await {
                 Ok(u) => u,
@@ -200,7 +206,12 @@ async fn main() -> Result<()> {
                     std::process::exit(3);
                 }
             };
-            eprintln!("Connecting to Zcash peers...");
+            if let Route::Tor(t) = &route {
+                if !direct_peers {
+                    p2p::use_tor(t);
+                }
+            }
+            eprintln!("Connecting to Zcash peers{}...", if p2p::over_tor() { " over Tor" } else { "" });
             let mut reference = Reference::new(4).await?;
             // Before serving the wallet, run the full check once, history
             // included, the same way. Over Tor the server can't tell this

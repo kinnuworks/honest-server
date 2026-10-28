@@ -128,11 +128,42 @@ pub struct Peer {
     buf: Vec<u8>,
 }
 
+/// When set, every peer connection goes through this Tor SOCKS proxy.
+static PEER_TOR: std::sync::OnceLock<String> = std::sync::OnceLock::new();
+
+/// Sends all later peer connections through Tor, each on its own circuit, so
+/// peers see Tor exits instead of this machine's IP.
+pub fn use_tor(proxy: &str) {
+    let _ = PEER_TOR.set(proxy.to_string());
+}
+
+pub fn over_tor() -> bool {
+    PEER_TOR.get().is_some()
+}
+
+async fn open(addr: SocketAddr) -> Result<TcpStream> {
+    let Some(proxy) = PEER_TOR.get() else {
+        return Ok(timeout(Duration::from_secs(6), TcpStream::connect(addr)).await.context("connect timeout")??);
+    };
+    // Tor gives each distinct SOCKS username its own circuit.
+    static N: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+    let n = N.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    let t = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_nanos()).unwrap_or(0);
+    let mut seed = t.to_le_bytes().to_vec();
+    seed.extend(n.to_le_bytes());
+    let circuit = hex::encode(&dsha256(&seed)[..8]);
+    let s = timeout(
+        Duration::from_secs(30),
+        tokio_socks::tcp::Socks5Stream::connect_with_password(proxy.as_str(), addr, &circuit, "x"),
+    )
+    .await
+    .context("connect timeout through Tor")??;
+    Ok(s.into_inner())
+}
+
 impl Peer {
     pub async fn connect(addr: SocketAddr) -> Result<Peer> {
-        let stream = timeout(Duration::from_secs(6), TcpStream::connect(addr))
-            .await
-            .context("connect timeout")??;
+        let stream = open(addr).await?;
         let mut peer = Peer {
             addr,
             user_agent: String::new(),

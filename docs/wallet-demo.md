@@ -32,6 +32,8 @@ Error: code: 'Unrecoverable data loss or corruption', message: "Honest Server re
 
 The block on a public explorer: [3,533,929](https://3xpl.com/zcash/block/3533929).
 
+At 22:00 UTC the same normal sync ran again after the proxy started reaching Zcash peers through Tor as well: `Connecting to Zcash peers over Tor...`, start-up check PASS, `verified blocks 3533967-3533982 against Zcash peers`, and the wallet's `Scan complete for range ChainTip(3533967..3534008)`.
+
 ## zingo-cli
 
 Recorded on Oct 28 2026 around 19:45 UTC against Zcash mainnet, with Zingo's command-line wallet (`zingo-cli` from zingolib `zingolib_v8.0.0-rc.1`). That release sends every online session through its Nym mixnet; to point it at a local server, it was built with the project's own `nakednet-test-mode` feature (`--no-default-features --features nakednet-test-mode`), and it only synced, never sent.
