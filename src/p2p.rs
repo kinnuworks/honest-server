@@ -288,7 +288,7 @@ impl Peer {
         let mut blocks = Vec::new();
         let mut answered = 0;
         while answered < hashes.len() {
-            let (cmd, payload) = self.recv(Duration::from_secs(30)).await?;
+            let (cmd, payload) = self.recv(Duration::from_secs(15)).await?;
             match cmd.as_str() {
                 "block" => {
                     blocks.push(payload);
@@ -339,20 +339,28 @@ pub async fn connect_peers(want: usize, min_version: i32) -> Vec<Peer> {
         for a in batch {
             set.spawn(async move { Peer::connect(a).await });
         }
-        let mut found = Vec::new();
+        // Take peers as they answer and stop as soon as there are enough.
+        let mut others = Vec::new();
         while let Some(res) = set.join_next().await {
             if let Ok(Ok(p)) = res {
-                found.push(p);
-            }
-        }
-        for (i, mut p) in found.into_iter().enumerate() {
-            if i < 4 && peers.len() < want {
-                if let Ok(more) = p.get_addrs().await {
-                    candidates.extend(more.into_iter().filter(|a| !tried.contains(a)));
+                if p.version >= min_version {
+                    peers.push(p);
+                    if peers.len() >= want {
+                        break;
+                    }
+                } else if others.len() < 4 {
+                    others.push(p);
                 }
             }
-            if p.version >= min_version && peers.len() < want {
-                peers.push(p);
+        }
+        set.abort_all();
+        if peers.len() >= want {
+            break;
+        }
+        // Still short: ask a few peers for more addresses for the next round.
+        for p in peers.iter_mut().take(2).chain(others.iter_mut()) {
+            if let Ok(more) = p.get_addrs().await {
+                candidates.extend(more.into_iter().filter(|a| !tried.contains(a)));
             }
         }
         candidates.sort();

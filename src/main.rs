@@ -32,6 +32,10 @@ enum Cmd {
         /// Print JSON instead of the readable report
         #[arg(long)]
         json: bool,
+        /// Test mode: remove one real shielded note from the server's answer
+        /// (and patch the tree sizes) to show what a lying server looks like
+        #[arg(long)]
+        test_drop_note: bool,
     },
     /// List the Zcash peers the reference blocks would come from.
     Peers,
@@ -63,12 +67,19 @@ async fn main() -> Result<()> {
     let _ = rustls::crypto::ring::default_provider().install_default();
     let cli = Cli::parse();
     match cli.cmd {
-        Cmd::Check { server, blocks, tor, json } => {
+        Cmd::Check { server, blocks, tor, json, test_drop_note } => {
             let route = tor.map(Route::Tor).unwrap_or(Route::Direct);
             eprintln!("Connecting to Zcash peers...");
-            let mut reference = Reference::new(8).await?;
+            let mut reference = Reference::new(4).await?;
             eprintln!("Checking {server}...");
-            let r = check::check(&server, &route, blocks, &mut reference).await;
+            let r = if test_drop_note {
+                match check::test_row(&server, &route, blocks, &mut reference).await {
+                    Some(r) => r,
+                    None => anyhow::bail!("couldn't build the test: no shielded notes in the window"),
+                }
+            } else {
+                check::check(&server, &route, blocks, &mut reference).await
+            };
             if json {
                 println!("{}", serde_json::to_string_pretty(&r)?);
             } else {
@@ -140,11 +151,24 @@ fn print_report(r: &CheckResult) {
     if !r.info.software.is_empty() {
         println!("  server: {}, node {}, tip {}", r.info.software, r.info.node, r.server_tip);
     }
+    if let Some(c) = &r.consistency_only {
+        println!("  A consistency-only check says: {} ({})", mark(c.status), c.detail);
+    }
     match r.range {
-        Some((a, b)) => println!(
-            "  Complete  {}  blocks {a}-{b}: {} blocks, {} shielded transactions, {} note commitments and {} nullifiers matched full blocks from Zcash peers",
-            mark(r.complete), r.tally.blocks, r.tally.shielded_txs, r.tally.commitments, r.tally.nullifiers
-        ),
+        Some((a, b)) => {
+            println!("  Complete  {}  blocks {a}-{b}, compared with full blocks from Zcash peers", mark(r.complete));
+            println!(
+                "                  {} shielded transactions, {} note commitments, {} nullifiers matched{}",
+                r.tally.shielded_txs,
+                r.tally.commitments,
+                r.tally.nullifiers,
+                match r.mismatches.len() {
+                    0 => String::new(),
+                    1 => "; 1 mismatch".to_string(),
+                    n => format!("; {n} mismatches"),
+                }
+            );
+        }
         None => println!("  Complete  {}", mark(r.complete)),
     }
     match r.network_tip {
@@ -157,11 +181,8 @@ fn print_report(r: &CheckResult) {
         if r.info.reported_upgrade.is_empty() { "no pending upgrade" } else { &r.info.reported_upgrade },
         r.info.reported_upgrade_height
     );
-    if let Some(c) = &r.consistency_only {
-        println!("  A consistency-only check says: {} ({})", mark(c.status), c.detail);
-    }
     for m in r.mismatches.iter().take(20) {
-        println!("  MISMATCH block {} tx {} ({}): {}", m.height, m.txid, m.tx_index, m.what);
+        println!("  MISMATCH  block {}, tx {}...: {}", m.height, &m.txid[..16], m.what);
     }
     if r.mismatches.len() > 20 {
         println!("  ...and {} more mismatches", r.mismatches.len() - 20);

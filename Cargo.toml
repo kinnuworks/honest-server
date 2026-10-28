@@ -2,6 +2,8 @@
 name = "honest-server"
 version = "0.1.0"
 edition = "2024"
+description = "Check Zcash light-wallet servers against full blocks from Zcash peers"
+license = "MIT"
 
 [dependencies]
 anyhow = "1.0.104"
@@ -24,4 +26,5 @@ zcash_primitives = "0.31"
 zcash_protocol = "0.11"
 
 [build-dependencies]
+protox = "0.10.0"
 tonic-prost-build = "0.14.8"

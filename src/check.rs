@@ -70,9 +70,24 @@ pub struct Reference {
 
 impl Reference {
     pub async fn new(want_peers: usize) -> Result<Reference> {
-        let peers = p2p::connect_peers(want_peers, 170_190).await;
+        // Peers come and go, and some refuse new connections for a while, so
+        // try a few times before giving up.
+        let mut peers = Vec::new();
+        for attempt in 0..4 {
+            if attempt > 0 {
+                tokio::time::sleep(std::time::Duration::from_secs(3)).await;
+            }
+            for p in p2p::connect_peers(want_peers, 170_190).await {
+                if !peers.iter().any(|q: &Peer| q.addr == p.addr) {
+                    peers.push(p);
+                }
+            }
+            if peers.len() >= 3 {
+                break;
+            }
+        }
         if peers.len() < 2 {
-            bail!("could not reach two NU7-ready Zcash peers");
+            bail!("could not reach two NU7-ready Zcash peers; check that outbound port 8233 is open");
         }
         Ok(Reference { peers, cache: HashMap::new(), network_tip: None })
     }
@@ -103,46 +118,64 @@ impl Reference {
         if todo.is_empty() {
             return;
         }
-        let hashes: Vec<[u8; 32]> = todo.iter().map(|(_, h)| *h).collect();
         let mut agree: HashMap<[u8; 32], (Option<VerifiedBlock>, usize)> = HashMap::new();
+        let mut pool = std::mem::take(&mut self.peers);
         let mut alive = Vec::new();
-        for mut peer in std::mem::take(&mut self.peers) {
-            let mut ok = true;
-            for chunk in hashes.chunks(16) {
-                match peer.get_blocks(chunk).await {
-                    Ok(blocks) => {
-                        for raw in blocks {
-                            // Match the block to the hash we asked for by its header.
-                            let Some((height, hash)) = todo.iter().find(|(_, h)| {
-                                zcash_primitives::block::BlockHeader::read(&raw[..])
-                                    .map(|hd| hd.hash().0 == *h)
-                                    .unwrap_or(false)
-                            }) else { continue };
-                            if let Ok(vb) = verify::verify_block(&raw, hash, *height as u32) {
-                                let e = agree.entry(*hash).or_insert((None, 0));
-                                e.1 += 1;
-                                if e.0.is_none() {
-                                    e.0 = Some(vb);
-                                }
+        // Ask three peers at once; if some blocks still lack two verifying
+        // peers, ask the next three for just those.
+        loop {
+            let missing: Vec<[u8; 32]> = todo
+                .iter()
+                .map(|(_, h)| *h)
+                .filter(|h| agree.get(h).map(|(_, n)| *n < 2).unwrap_or(true))
+                .collect();
+            if missing.is_empty() || pool.is_empty() {
+                break;
+            }
+            let batch: Vec<Peer> = pool.drain(..pool.len().min(3)).collect();
+            let mut set = tokio::task::JoinSet::new();
+            for mut peer in batch {
+                let missing = missing.clone();
+                set.spawn(async move {
+                    let mut got = Vec::new();
+                    let mut ok = true;
+                    for chunk in missing.chunks(16) {
+                        match tokio::time::timeout(std::time::Duration::from_secs(25), peer.get_blocks(chunk)).await {
+                            Ok(Ok(blocks)) => got.extend(blocks),
+                            _ => {
+                                ok = false;
+                                break;
                             }
                         }
                     }
-                    Err(_) => {
-                        ok = false;
-                        break;
+                    (peer, ok, got)
+                });
+            }
+            while let Some(res) = set.join_next().await {
+                let Ok((peer, ok, got)) = res else { continue };
+                if ok {
+                    alive.push(peer);
+                }
+                for raw in got {
+                    // Match the block to the hash we asked for by its header.
+                    let Ok(hd) = zcash_primitives::block::BlockHeader::read(&raw[..]) else { continue };
+                    let Some((height, hash)) = todo.iter().find(|(_, h)| hd.hash().0 == *h) else { continue };
+                    if let Ok(vb) = verify::verify_block(&raw, hash, *height as u32) {
+                        let e = agree.entry(*hash).or_insert((None, 0));
+                        e.1 += 1;
+                        if e.0.is_none() {
+                            e.0 = Some(vb);
+                        }
                     }
                 }
-            }
-            if ok {
-                alive.push(peer);
-            }
-            // Stop once every block has two verifying peers; keep the rest for later.
-            if agree.values().filter(|(_, n)| *n >= 2).count() == hashes.len() {
-                break;
+                // Don't wait for a slow peer once every block has two.
+                if todo.iter().all(|(_, h)| agree.get(h).map(|(_, n)| *n >= 2).unwrap_or(false)) {
+                    set.abort_all();
+                    break;
+                }
             }
         }
-        // Put back peers we didn't get to.
-        alive.extend(std::mem::take(&mut self.peers));
+        alive.extend(pool);
         self.peers = alive;
         for (_, h) in &todo {
             let entry = match agree.remove(h) {
@@ -157,49 +190,28 @@ impl Reference {
     /// height and hash of the last header they agree on.
     async fn tip_after(&mut self, from_height: u64, from_hash: [u8; 32]) -> Option<(u64, [u8; 32])> {
         self.top_up().await;
+        let mut pool = std::mem::take(&mut self.peers);
+        let mut set = tokio::task::JoinSet::new();
+        for peer in pool.drain(..pool.len().min(4)) {
+            set.spawn(walk_headers(peer, from_height, from_hash));
+        }
         let mut best: Option<(u64, [u8; 32])> = None;
         let mut confirmations = 0;
-        for peer in self.peers.iter_mut() {
-            let mut height = from_height;
-            let mut hash = from_hash;
-            let mut linked = false;
-            for _ in 0..40 {
-                let Ok(headers) = peer.get_headers(&[hash]).await else { break };
-                if headers.is_empty() {
-                    linked = true;
-                    break;
-                }
-                let mut ok = true;
-                for raw in &headers {
-                    match verify::verify_header(raw) {
-                        Ok(vh) if vh.prev == hash => {
-                            height += 1;
-                            hash = vh.hash;
-                        }
-                        _ => {
-                            ok = false;
-                            break;
-                        }
-                    }
-                }
-                if !ok {
-                    break;
-                }
-                linked = true;
-                if headers.len() < 160 {
-                    break;
-                }
-            }
-            if linked {
+        while let Some(res) = set.join_next().await {
+            let Ok((peer, tip)) = res else { continue };
+            self.peers.push(peer);
+            if let Some(t) = tip {
                 confirmations += 1;
-                if best.map(|(h, _)| height > h).unwrap_or(true) {
-                    best = Some((height, hash));
+                if best.map(|(h, _)| t.0 > h).unwrap_or(true) {
+                    best = Some(t);
                 }
                 if confirmations >= 2 {
+                    set.abort_all();
                     break;
                 }
             }
         }
+        self.peers.extend(pool);
         if confirmations >= 2 {
             if let Some(b) = best {
                 if self.network_tip.map(|(h, _)| b.0 > h).unwrap_or(true) {
@@ -211,6 +223,37 @@ impl Reference {
             None
         }
     }
+}
+
+/// Follows one peer's headers forward from a block. Returns the peer's tip if
+/// the block is on its chain and every header verifies, or None.
+async fn walk_headers(mut peer: Peer, from_height: u64, from_hash: [u8; 32]) -> (Peer, Option<(u64, [u8; 32])>) {
+    let mut height = from_height;
+    let mut hash = from_hash;
+    for _ in 0..40 {
+        let headers = match tokio::time::timeout(std::time::Duration::from_secs(15), peer.get_headers(&[hash])).await {
+            Ok(Ok(h)) => h,
+            _ => return (peer, None),
+        };
+        // An empty answer means the block we asked from is the peer's tip.
+        if headers.is_empty() {
+            return (peer, Some((height, hash)));
+        }
+        for raw in &headers {
+            match verify::verify_header(raw) {
+                Ok(vh) if vh.prev == hash => {
+                    height += 1;
+                    hash = vh.hash;
+                }
+                // Headers that don't continue from our block: it isn't on this peer's chain.
+                _ => return (peer, None),
+            }
+        }
+        if headers.len() < 160 {
+            return (peer, Some((height, hash)));
+        }
+    }
+    (peer, Some((height, hash)))
 }
 
 fn now() -> u64 {
