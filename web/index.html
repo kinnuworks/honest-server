@@ -51,6 +51,15 @@
     .verdicts td { display: block; padding: 0; border: 0; width: auto !important; }
     .verdicts td:first-child { grid-column: 1 / -1; }
   }
+  .hist { display: grid; grid-template-columns: minmax(140px, 260px) 1fr; gap: 6px 16px; align-items: center; font-size: var(--fs-small); }
+  .hist code { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .hcells { display: flex; gap: 2px; flex-wrap: nowrap; overflow: hidden; justify-content: flex-end; }
+  .hcell { display: inline-block; width: 10px; height: 14px; flex: 0 0 10px; border: 1px solid transparent; }
+  .hcell.ok { background: var(--ok); } .hcell.bad { background: var(--bad); }
+  .hcell.grey { background: var(--sheet-2); border-color: var(--rule-strong); }
+  .hcell.none { background: transparent; border: 1px dashed var(--rule); }
+  .key .hcell { vertical-align: middle; margin-right: 4px; }
+  @media (max-width: 640px) { .hist { grid-template-columns: 1fr; } .hcell { width: 7px; flex-basis: 7px; } }
   ol.how { padding-left: 1.4em; } ol.how li { margin-bottom: var(--s-3); max-width: 80ch; }
 </style>
 </head>
@@ -99,6 +108,16 @@
     </figure>
   </section>
 
+  <section class="section page" id="history" hidden>
+    <h2>Every check so far</h2>
+    <p class="muted" id="history-note"></p>
+    <figure class="ui-window ui-frame">
+      <span class="ui-frame__caption">[ fig. 3 · one square per run, newest on the right ]</span>
+      <div class="ui-window__body" id="history-body"></div>
+    </figure>
+    <div class="key"><span><i class="hcell ok"></i> all three checks passed</span><span><i class="hcell bad"></i> a check failed</span><span><i class="hcell grey"></i> couldn't verify</span><span><i class="hcell none"></i> not in that run</span></div>
+  </section>
+
   <section class="section page" id="proof-section" hidden>
     <section class="ui-proof" id="proof"></section>
   </section>
@@ -116,6 +135,11 @@ honest-server check zec.rocks:443 --test-drop-note</code></pre>
     <p>Run a light-wallet server on your own machine and point your wallet at it. It forwards every call to the real server over Tor when Tor is running, so the server sees a Tor exit instead of your IP. It checks every recent block, and a random sample of older ones, against verified blocks from Zcash peers, and refuses any block that doesn't match.</p>
     <pre class="cmd"><code>honest-server proxy zec.rocks:443
 # then set your wallet's server to http://127.0.0.1:9067</code></pre>
+    <p>Tested with a real wallet on mainnet. Zingo's command-line wallet synced through the proxy; with one note removed in test mode, its sync stopped with:</p>
+    <pre class="cmd"><code>error: Sync error.
+caused by: code: 'Unrecoverable data loss or corruption', message: "Honest Server refused block 3533810
+from the server: transaction 270445b41542b33b...: Ironwood actions: block has 2, server sent 1"</code></pre>
+    <p class="muted">Recorded Oct 28 2026 with zingo-cli from zingolib 8.0.0-rc.1, built with its test feature that skips the Nym mixnet so it could use a local server; it only synced. <a href="https://github.com/kinnuworks/honest-server/blob/master/docs/wallet-demo.md">Full transcript</a>.</p>
   </section>
 
   <section class="section page" id="how">
@@ -255,6 +279,24 @@ function showError() {
   $("summary").textContent = "Couldn't load the latest results.";
 }
 
+const RUNS_SHOWN = 72;
+
+function renderHistory(h) {
+  if (!Array.isArray(h) || !h.length) return;
+  const runs = h.slice(-RUNS_SHOWN);
+  const names = [...new Set(runs.flatMap(r => r.servers.map(x => x.s)))];
+  const cell = (run, name) => {
+    const x = run.servers.find(v => v.s === name);
+    if (!x) return `<i class="hcell none" title="${when(run.t)}: not in this run"></i>`;
+    const k = [x.c, x.cur, x.n].includes("fail") ? "bad" : [x.c, x.cur, x.n].every(v => v === "pass") ? "ok" : "grey";
+    return `<i class="hcell ${k}" title="${when(run.t)}: complete ${x.c}, current ${x.cur}, NU7 ${x.n}"></i>`;
+  };
+  $("history-body").innerHTML = `<div class="hist">${names.map(name =>
+    `<code>${esc(name.replace(/^https?:\/\//, ""))}</code><span class="hcells">${runs.map(r => cell(r, name)).join("")}</span>`).join("")}</div>`;
+  $("history-note").textContent = `${h.length} ${h.length === 1 ? "run" : "runs"} recorded since ${when(h[0].t)}. The table re-checks every hour, so a server that freezes or forks shows up here the hour it happens.`;
+  $("history").hidden = false;
+}
+
 const state = new URLSearchParams(location.search).get("state");
 if (state === "loading") {
   // leave the loading states in place
@@ -269,6 +311,7 @@ if (state === "loading") {
     .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
     .then(t => { renderServers(t); renderTest(t); })
     .catch(showError);
+  fetch("history.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.ok ? r.json() : []).then(renderHistory).catch(() => {});
 }
 </script>
 </body>

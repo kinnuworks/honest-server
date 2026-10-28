@@ -83,6 +83,9 @@ enum Cmd {
         servers: String,
         #[arg(long, default_value = "web/results.json")]
         out: String,
+        /// Append a compact record of this run to this file (kept across runs)
+        #[arg(long)]
+        history: Option<String>,
         #[arg(long, default_value_t = 24)]
         blocks: u64,
         #[arg(long)]
@@ -216,7 +219,7 @@ async fn main() -> Result<()> {
             }
             println!("{} peers answered", all.len());
         }
-        Cmd::Table { servers, out, blocks, tor } => {
+        Cmd::Table { servers, out, blocks, tor, history } => {
             let route = tor.map(Route::Tor).unwrap_or(Route::Direct);
             let list: Vec<String> = std::fs::read_to_string(&servers)?
                 .lines()
@@ -258,8 +261,35 @@ async fn main() -> Result<()> {
             }
             std::fs::write(&out, serde_json::to_string_pretty(&table)?)?;
             eprintln!("Wrote {out}");
+            if let Some(path) = history {
+                append_history(&path, &table)?;
+                eprintln!("Appended this run to {path}");
+            }
         }
     }
+    Ok(())
+}
+
+/// Keeps the last runs as one line per server: when, and the three verdicts.
+const HISTORY_RUNS: usize = 2000;
+
+fn append_history(path: &str, table: &Table) -> Result<()> {
+    let mut runs: Vec<serde_json::Value> = std::fs::read_to_string(path)
+        .ok()
+        .and_then(|t| serde_json::from_str(&t).ok())
+        .unwrap_or_default();
+    let tip = table.servers.iter().filter_map(|r| r.network_tip).max();
+    runs.push(serde_json::json!({
+        "t": table.generated_at,
+        "tip": tip,
+        "servers": table.servers.iter().map(|r| serde_json::json!({
+            "s": r.server, "c": r.complete, "cur": r.current, "n": r.nu7,
+        })).collect::<Vec<_>>(),
+    }));
+    if runs.len() > HISTORY_RUNS {
+        runs.drain(..runs.len() - HISTORY_RUNS);
+    }
+    std::fs::write(path, serde_json::to_string(&runs)?)?;
     Ok(())
 }
 

@@ -38,7 +38,9 @@ jobs:
             sleep 2
           done
       - run: cargo build --release
-      - run: ./target/release/honest-server table --servers servers.txt --out web/results.json --tor 127.0.0.1:9050
+      - name: Fetch the published history
+        run: curl -sfL https://kinnuworks.github.io/honest-server/history.json -o web/history.json || curl -sfL https://honest-server.vercel.app/history.json -o web/history.json || true
+      - run: ./target/release/honest-server table --servers servers.txt --out web/results.json --history web/history.json --tor 127.0.0.1:9050
       - name: Deploy to Vercel
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
