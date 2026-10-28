@@ -469,3 +469,43 @@ pub async fn test_row(base: &str, route: &Route, window: u64, reference: &mut Re
     r.server = "test server (one note removed)".into();
     Some(r)
 }
+
+/// Runs the mutation self-test on real blocks from `server`: every change in
+/// `mutate::run`, against the verified full blocks.
+pub async fn selftest(server: &str, route: &Route, window: u64, reference: &mut Reference) -> Option<crate::mutate::MutationReport> {
+    let mut r = blank(server);
+    let blocks = fetch_server(server, route, window, &mut r).await.ok()?;
+    let wanted: Vec<(u64, [u8; 32])> = blocks
+        .iter()
+        .filter_map(|b| b.hash.as_slice().try_into().ok().map(|h| (b.height, h)))
+        .collect();
+    reference.fetch(&wanted).await;
+    let mut report = crate::mutate::MutationReport::default();
+    for b in &blocks {
+        let Ok(hash) = <[u8; 32]>::try_from(b.hash.as_slice()) else { continue };
+        if let Some(Some((full, _))) = reference.cache.get(&hash) {
+            crate::mutate::run(full, b, &mut report);
+        }
+    }
+    (report.blocks > 0).then_some(report)
+}
+
+fn blank(server: &str) -> CheckResult {
+    CheckResult {
+        server: server.to_string(),
+        route: String::new(),
+        checked_at: now(),
+        info: ServerInfo::default(),
+        server_tip: 0,
+        network_tip: None,
+        range: None,
+        complete: Status::Unverified,
+        current: Status::Unverified,
+        nu7: Status::Unverified,
+        tally: Tally::default(),
+        unverified_blocks: vec![],
+        mismatches: vec![],
+        notes: vec![],
+        consistency_only: None,
+    }
+}

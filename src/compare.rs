@@ -206,20 +206,29 @@ pub fn drop_one_note(blocks: &[CompactBlock]) -> Option<(Vec<CompactBlock>, Stri
 }
 
 #[cfg(test)]
-mod tests {
+pub mod tests_support {
+    pub fn real_pair() -> (crate::verify::VerifiedBlock, super::CompactBlock) {
+        let f = super::tests::full();
+        let c = super::tests::honest(&f);
+        (f, c)
+    }
+}
+
+#[cfg(test)]
+pub mod tests {
     use super::*;
     use crate::lwd::rpc::{ChainMetadata, CompactSaplingOutput, CompactSaplingSpend};
     use crate::verify::{verify_block, VerifiedBlock};
 
     const RAW: &[u8] = include_bytes!("../tests/fixtures/block-3533761.bin");
 
-    fn full() -> VerifiedBlock {
+    pub fn full() -> VerifiedBlock {
         let hash = zcash_primitives::block::BlockHeader::read(RAW).unwrap().hash().0;
         verify_block(RAW, &hash, 3_533_761).unwrap()
     }
 
     /// The compact block an honest server would send for `full`.
-    fn honest(full: &VerifiedBlock) -> CompactBlock {
+    pub fn honest(full: &VerifiedBlock) -> CompactBlock {
         let action = |a: &crate::verify::ActionData| CompactOrchardAction {
             nullifier: a.nullifier.to_vec(),
             cmx: a.cmx.to_vec(),

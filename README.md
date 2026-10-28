@@ -20,6 +20,8 @@ honest-server check zec.rocks:443 --test-drop-note
 
 The first command checks the server for real. The second takes the same real data, removes one shielded note and patches the tree sizes so the chain still adds up, then shows that Honest Server catches it.
 
+`honest-server selftest zec.rocks:443` goes further: it makes every single change it can to the server's real blocks and counts how many the check catches. On 24 mainnet blocks from zec.rocks (3,533,7xx, Oct 28 2026) it tried 1,034 changes across Sapling, Orchard and Ironwood and caught all 1,034.
+
 ## What it checks
 
 For each server, over a window of recent blocks (24 by default):
@@ -63,6 +65,7 @@ Pass `--tor 127.0.0.1:9050` to run your own check over Tor too.
 ```bash
 honest-server check <host:port> [--blocks 24] [--tor 127.0.0.1:9050] [--json] [--test-drop-note]
 honest-server table --servers servers.txt --out web/results.json [--tor 127.0.0.1:9050]
+honest-server selftest <host:port> [--blocks 24]
 honest-server peers
 ```
 

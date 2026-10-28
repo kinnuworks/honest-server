@@ -1,6 +1,7 @@
 mod check;
 mod compare;
 mod lwd;
+mod mutate;
 mod p2p;
 mod verify;
 
@@ -39,6 +40,13 @@ enum Cmd {
     },
     /// List the Zcash peers the reference blocks would come from.
     Peers,
+    /// Self-test on live data: change every field of every shielded note in
+    /// the server's real blocks, one at a time, and count how many are caught.
+    Selftest {
+        server: String,
+        #[arg(long, default_value_t = 24)]
+        blocks: u64,
+    },
     /// Check a list of servers and write the public table as JSON.
     Table {
         /// File with one host:port per line ("# label" comments allowed)
@@ -60,6 +68,13 @@ struct Table {
     peers: Vec<String>,
     servers: Vec<CheckResult>,
     test: Option<CheckResult>,
+    selftest: Option<SelftestSummary>,
+}
+
+#[derive(serde::Serialize)]
+struct SelftestSummary {
+    server: String,
+    report: mutate::MutationReport,
 }
 
 #[tokio::main]
@@ -89,6 +104,26 @@ async fn main() -> Result<()> {
                 std::process::exit(2);
             }
         }
+        Cmd::Selftest { server, blocks } => {
+            eprintln!("Connecting to Zcash peers...");
+            let mut reference = Reference::new(4).await?;
+            eprintln!("Changing real blocks from {server}...");
+            match check::selftest(&server, &Route::Direct, blocks, &mut reference).await {
+                Some(r) => {
+                    println!("{} blocks, {} single changes tried, {} caught", r.blocks, r.tried, r.caught);
+                    for (kind, (t, c)) in &r.by_kind {
+                        println!("  {kind:<36} {c} of {t} caught");
+                    }
+                    for m in &r.missed {
+                        println!("  MISSED {m}");
+                    }
+                    if r.caught != r.tried {
+                        std::process::exit(2);
+                    }
+                }
+                None => anyhow::bail!("couldn't get verified blocks from {server}"),
+            }
+        }
         Cmd::Peers => {
             let all = p2p::connect_peers(30, 0).await;
             for p in &all {
@@ -116,8 +151,14 @@ async fn main() -> Result<()> {
                 .iter()
                 .find(|r| r.complete == Status::Pass)
                 .map(|r| r.server.clone());
-            let test = match base {
-                Some(b) => check::test_row(&b, &route, blocks, &mut reference).await,
+            let test = match &base {
+                Some(b) => check::test_row(b, &route, blocks, &mut reference).await,
+                None => None,
+            };
+            let selftest = match &base {
+                Some(b) => check::selftest(b, &route, blocks, &mut reference)
+                    .await
+                    .map(|report| SelftestSummary { server: b.clone(), report }),
                 None => None,
             };
             let table = Table {
@@ -126,6 +167,7 @@ async fn main() -> Result<()> {
                 peers: reference.peer_summary(),
                 servers: results,
                 test,
+                selftest,
             };
             if let Some(dir) = std::path::Path::new(&out).parent() {
                 std::fs::create_dir_all(dir)?;

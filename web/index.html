@@ -113,7 +113,8 @@ fetch("results.json", { cache: "no-store" }).then(r => r.json()).then(t => {
   document.getElementById("test").innerHTML = `
     <p>This test server sends real blocks from a public server with one shielded note removed, and patches the note commitment tree sizes to match. It is a test row, not a real server.</p>
     <p>A check that only looks at the server's own answers: ${mark(x.consistency_only.status)} (${esc(x.consistency_only.detail)}).</p>
-    <p>Honest Server: ${mark(x.complete)}${m ? `. Block ${n(m.height)}, transaction ${esc(m.txid.slice(0, 16))}...: ${esc(m.what)}.` : ""}</p>`;
+    <p>Honest Server: ${mark(x.complete)}${m ? `. Block ${n(m.height)}, transaction ${esc(m.txid.slice(0, 16))}...: ${esc(m.what)}.` : ""}</p>` +
+    (t.selftest ? `<p class="small">Self-test on the same live data: ${n(t.selftest.report.tried)} single changes to ${n(t.selftest.report.blocks)} real blocks (a flipped byte in every nullifier, note commitment, ephemeral key, ciphertext and txid; every note and transaction dropped, moved or reordered; fake notes and transactions added). ${n(t.selftest.report.caught)} caught.</p>` : "");
 }).catch(() => {
   document.getElementById("status").textContent = "Couldn't load the latest results.";
 });
