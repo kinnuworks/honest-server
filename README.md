@@ -6,6 +6,8 @@ Honest Server checks Zcash light-wallet servers (lightwalletd and Zaino) against
 
 A shielded wallet can't see the chain itself. It only decrypts what its server sends, so a server that drops one note hides a payment, and the wallet has no way to notice.
 
+It leaks nothing doing it. Over Tor, neither the server nor the Zcash peers see your IP. Behind the proxy, your wallet's lookups of its own recent transactions are answered from peer blocks, so the server never learns which payments are yours. Nothing is sent to us.
+
 ![A real check of zec.rocks, then the same data with one note removed](docs/demo.gif)
 
 **Live table:** https://honest-server.vercel.app
