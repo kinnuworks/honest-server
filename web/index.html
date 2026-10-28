@@ -218,7 +218,7 @@ function renderTest(t) {
       <thead><tr><th>Check</th><th>Verdict</th><th>What it saw</th></tr></thead>
       <tbody>
         <tr data-reveal style="--i:25"><td>A check that only looks at the server's own answers</td><td>${x.consistency_only.status === "pass" ? '<span class="ui-pill ui-pill--ok">Looks fine</span>' : pill(x.consistency_only.status)}</td><td>${esc(x.consistency_only.detail)}</td></tr>
-        <tr data-reveal style="--i:26" class="caught"><td><strong>Honest Server</strong></td><td>${x.complete === "fail" ? '<span class="ui-pill ui-pill--bad">Lie caught</span>' : pill(x.complete)}</td><td class="evidence">${m ? `<a href="https://blockchair.com/zcash/block/${m.height}">Block ${n(m.height)}</a>, transaction ${esc(m.txid.slice(0, 16))}...: <strong>${esc(m.what)}</strong>` : ""}</td></tr>
+        <tr data-reveal style="--i:26" class="caught"><td><strong>Honest Server</strong></td><td>${x.complete === "fail" ? '<span class="ui-pill ui-pill--bad">Lie caught</span>' : pill(x.complete)}</td><td class="evidence">${m ? `<a href="https://3xpl.com/zcash/block/${m.height}">Block ${n(m.height)}</a>, transaction ${esc(m.txid.slice(0, 16))}...: <strong>${esc(m.what)}</strong>` : ""}</td></tr>
       </tbody>
     </table></div>
     ${s ? `<p class="muted">Self-test on the same live data: ${n(s.tried)} single changes to ${n(s.blocks)} real blocks (a flipped byte in every nullifier, note commitment, ephemeral key, ciphertext and txid; every note and transaction dropped, moved or reordered; fake notes and transactions added). ${n(s.caught)} caught.</p>` : ""}`;
