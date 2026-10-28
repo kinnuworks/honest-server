@@ -46,3 +46,5 @@ caused by: code: 'Unrecoverable data loss or corruption', message: "Honest Serve
 ```
 
 The wallet stops and says why, instead of syncing past a block that is missing one of its notes.
+
+The block on a public explorer: [3,533,810](https://blockchair.com/zcash/block/3533810).
