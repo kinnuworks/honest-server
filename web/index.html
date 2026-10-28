@@ -31,7 +31,7 @@
   .servers td .note { display: block; color: var(--ink-3); font-size: var(--fs-small); margin-top: 4px; white-space: normal; max-width: 52ch; }
   .servers td .note.warn { color: var(--bad); }
   .servers td:not(:first-child) { white-space: nowrap; }
-  .ui-hero__deck a { color: var(--act); text-underline-offset: 3px; }
+  .ui-hero__deck a, .ui-hero__proof a { color: var(--act); text-underline-offset: 3px; }
   .servers th small { display: block; font-family: var(--font-body); font-size: var(--fs-small); text-transform: none; letter-spacing: 0; color: var(--ink-3); font-weight: 400; margin-top: 2px; }
   .unreach { font-size: var(--fs-small); margin: var(--s-3) var(--s-4); }
   #latest .ui-window__body { padding: 0; max-height: 640px; overflow-y: auto; }
@@ -97,7 +97,7 @@
           </div>
         </div>
       </figure>
-      <div class="key"><span><span class="ui-pill ui-pill--ok">Pass</span> matched the verified blocks</span><span><span class="ui-pill ui-pill--bad">Fail</span> something differs, with the evidence</span><span><span class="ui-pill">Couldn't verify</span> not a failure</span></div>
+      <div class="key"><span><span class="ui-pill ui-pill--ok">Pass</span> matched the verified blocks</span><span><span class="ui-pill ui-pill--bad">Fail</span> something differs, with the evidence</span><span><span class="ui-pill">Couldn't verify</span> the check couldn't finish, so no verdict</span></div>
     </div>
   </section>
 
@@ -186,7 +186,9 @@ function facts(r) {
 }
 
 function problems(r) {
-  const lines = r.notes.filter(x => !/^Tor exit/.test(x)).map(esc);
+  // An NU7 failure on a server whose data matched is an upgrade risk, not a lie; say so.
+  const upgrade = x => r.complete === "pass" && /^node runs/.test(x) ? `Data matched; the problem is the upgrade. ${x[0].toUpperCase()}${x.slice(1)}` : x;
+  const lines = r.notes.filter(x => !/^Tor exit/.test(x)).map(upgrade).map(esc);
   for (const m of r.mismatches.slice(0, 3)) lines.push(`Block ${n(m.height)}, transaction ${esc(m.txid.slice(0, 16))}...: ${esc(m.what)}`);
   return lines.map(l => `<span class="note warn">${l}</span>`).join("");
 }
@@ -261,7 +263,8 @@ function renderServers(t) {
       ? `${nu7} of those ${reached} ${nu7 === 1 ? "runs a node that isn't" : "run nodes that aren't"} on NU7, the network upgrade that activated at block 3,543,405`
       : `${nu7} of those ${reached} ${nu7 === 1 ? "runs a node that stops" : "run nodes that stop"} before NU7, the network upgrade due at block 3,543,405, around Nov 5`);
   }
-  $("summary").innerHTML = `<strong>${parts.join(". ")}.</strong> Last checked ${when(t.generated_at)}.`;
+  const lie = count("complete", "fail") ? "" : ` No server was caught lying in this run. <a href="#lie">Fig. 2</a> shows what a caught lie looks like.`;
+  $("summary").innerHTML = `<strong>${parts.join(". ")}.</strong>${lie} Last checked ${when(t.generated_at)}.`;
   $("status").textContent = `${S.length} servers · ${t.blocks_per_check} recent blocks each · over Tor`;
   const bad = r => r.complete === "fail" || r.current === "fail" || r.nu7 === "fail";
   const shown = [...S.filter(r => r.range && bad(r)), ...S.filter(r => r.range && !bad(r))];
