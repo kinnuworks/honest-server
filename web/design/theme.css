@@ -1,67 +1,67 @@
-/* Plain Ledger: token values only. Load after core/base.css.
-   Fonts, in <head> (or drop the link and let ui-monospace take over: zero font weight):
+/* Lab Report: token values only. Load after core/base.css.
+   Fonts, in <head>:
    <link rel="preconnect" href="https://fonts.googleapis.com">
    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&display=swap">
+   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&display=swap">
 */
 :root {
-  --paper: #FAFAFA;
-  --sheet: #FFFFFF;
-  --sheet-2: #F2F2F2;
-  --ink: #111111;
-  --ink-2: #333333;
-  --ink-3: #666666;
-  --rule: #BDBDBD;
-  --rule-strong: #414141;  /* table grid, inputs, frames */
-  --act: #F35815;          /* orange: actions only */
-  --on-act: #111111;
-  --act-ink: #111111;      /* links stay ink with an orange underline */
-  --mark: #FBCA00;         /* yellow bar: news line, the "you" row */
-  --on-mark: #111111;
-  --ok: #0F7428;  --ok-bg: #E6F4EA;
-  --bad: #C01A30; --bad-bg: #FCE8EB;
-  --warn: #8A5A00; --warn-bg: #FFF4CC;
-  --focus: #111111;
-  --overlay: rgb(17 17 17 / 0.45);
-  --btn-bg: #F35815; --btn-fg: #111111; --btn-border: #F35815;
-  --ghost-fg: #111111; --ghost-border: #F35815;
-  --link-line: #F35815;
-  --banner-bg: #FBCA00; --banner-fg: #111111;
-  --nav-line: #414141;
+  --paper: #FBFAFE;        /* lilac-white paper */
+  --sheet: #FFFFFF;        /* figure and card fill */
+  --sheet-2: #F3F2F9;      /* inset panels, table header */
+  --ink: #1A1522;          /* headings, figure frames, primary button */
+  --ink-2: #3A3443;        /* body */
+  --ink-3: #625C6B;        /* captions, units, legends */
+  --rule: #DEDCE4;         /* dividers */
+  --rule-strong: #8B8594;  /* input edges */
+  --act: #2A1EFF;          /* electric indigo: active, selected, live units */
+  --on-act: #FFFFFF;
+  --act-ink: #2A1EFF;      /* links */
+  --mark: #EEF17C;         /* marker yellow: selected text, the "you" row */
+  --on-mark: #1A1522;
+  --ok: #08704C;  --ok-bg: #DDF3EA;
+  --bad: #C0262D; --bad-bg: #FCE7E8;
+  --warn: #855C00; --warn-bg: #FBF0CF;
+  --focus: #2A1EFF;
+  --overlay: rgb(26 21 34 / 0.55);
+  --btn-bg: #1A1522; --btn-fg: #FFFFFF; --btn-border: #1A1522;
+  --ghost-fg: #1A1522; --ghost-border: #1A1522;
+  --link-line: #2A1EFF;
 
-  --font-display: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
-  --font-heading: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
-  --font-ui: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
-  --font-body: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
-  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
-  --font-accent: "IBM Plex Mono", ui-monospace, monospace;
-  --accent-style: normal; --turn-weight: 700;
-  --label-font: "IBM Plex Mono", ui-monospace, monospace;
-  --label-case: uppercase; --label-track: 0.04em; --label-weight: 600;
-  /* Hierarchy comes from weight, colour and position. Sizes barely move. */
-  --fs-display: 1.75rem; --fs-h2: 1.25rem; --fs-h3: 1rem; --fs-lead: 1.125rem;
-  --fs-body: 1rem; --fs-small: 0.875rem; --fs-label: 0.8125rem;
-  --lh-display: 1.25; --lh-heading: 1.35; --lh-body: 1.5;
-  --track-display: -0.01em; --track-heading: 0;
-  --weight-display: 700; --weight-heading: 700; --weight-strong: 700;
-  --btn-weight: 600; --btn-fs: 1rem;
-  --stat-font: "IBM Plex Mono", ui-monospace, monospace; --stat-fs: 2rem;
+  --font-display: "Geist Mono", ui-monospace, Menlo, monospace;
+  --font-heading: "Geist Mono", ui-monospace, Menlo, monospace;
+  --font-ui: "Geist Mono", ui-monospace, Menlo, monospace;
+  --font-body: "Geist", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, Menlo, monospace;
+  --font-accent: "Geist Mono", ui-monospace, Menlo, monospace;
+  --accent-style: normal;
+  --label-font: "Geist Mono", ui-monospace, Menlo, monospace;
+  --label-case: uppercase; --label-track: 0.05em; --label-weight: 500;
+  --fs-display: clamp(2.5rem, 1.6rem + 2.8vw, 3.5rem);
+  --fs-h2: clamp(1.75rem, 1.4rem + 1.1vw, 2.125rem);
+  --fs-h3: 1.25rem; --fs-lead: 1.125rem; --fs-body: 1rem; --fs-small: 0.875rem; --fs-label: 0.8125rem;
+  --lh-display: 1.05; --lh-heading: 1.2; --lh-body: 1.6;
+  --track-display: -0.035em; --track-heading: -0.02em;
+  --weight-display: 400; --weight-heading: 500; --weight-strong: 600;
+  --btn-fs: 0.8125rem; --btn-weight: 500; --btn-track: 0.06em; --btn-case: uppercase;
+  --stat-font: "Geist Mono", ui-monospace, monospace;
 
-  --page-max: 1080px; --gap-section: 96px; --pad-panel: 24px; --h-control: 40px; --pad-control: 16px;
+  --page-max: 1200px; --pad-panel: 24px; --h-control: 40px; --pad-control: 18px;
   --border-w: 1px;
-  --r-control: 0px; --r-card: 0px; --r-window: 0px; --r-pill: 0px; --r-badge: 0px;
-  --card-edge: #414141; --frame-line: #414141;
-  --shadow-card: none; --shadow-window: none; --shadow-pop: none; --shadow-btn: none;
-  --shadow-ghost: inset 0 0 0 1px #F35815;   /* 2px orange outline */
-  --press-y: 0px;
-  --tick: 0px;
-  --dots: 0; --chrome-bg: #F2F2F2; --chrome-fg: #333333; --chrome-align: left;
-  --device-bezel: #111111;
-  --art-1: #F35815; --art-2: #414141; --art-3: #BDBDBD; --art-4: #FBCA00;
-  --pill-dot-radius: 0;
+  --r-control: 4px; --r-card: 6px; --r-window: 0px; --r-pill: 4px; --r-badge: 2px;
+  --card-edge: #C9C5D0; --frame-line: #1A1522;
+  --shadow-card: none; --shadow-window: none; --shadow-btn: none; --shadow-ghost: none;
+  --shadow-pop: 0 16px 40px -16px rgb(26 21 34 / 0.35);
+  --press-y: 1px;
+  --tick: 10px; --tick-color: #1A1522;
+  --dots: 0; --chrome-bg: #FFFFFF; --chrome-fg: #3A3443; --chrome-align: center;
+  --device-bezel: #1A1522;
+  --art-1: #2A1EFF; --art-2: #E6E4EE; --art-3: #C9C5FF; --art-4: #FFFFFF;
+  --pill-dot-radius: 1px;
   --icon-stroke: 1.25;
 
-  --bg-pattern: none;
+  --bg-pattern: radial-gradient(circle at 1px 1px, rgb(26 21 34 / 0.10) 1px, transparent 0);
+  --bg-size: 24px 24px;
 
-  --dur-signature: calc(200ms * var(--motion-scale));
+  --dur-signature: calc(300ms * var(--motion-scale));
+  --stagger: 50ms;
 }
