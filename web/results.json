@@ -1,0 +1,593 @@
+{
+  "generated_at": 1793204541,
+  "blocks_per_check": 24,
+  "peers": [
+    "/Zakura:1.7.0/ (3533746)",
+    "/Zakura:1.7.0/ (3533746)"
+  ],
+  "servers": [
+    {
+      "server": "zec.rocks:443",
+      "route": "tor",
+      "checked_at": 1793204541,
+      "info": {
+        "software": "ECC LightWalletD v0.5.3",
+        "node": "Zakura:1.7.0",
+        "reported_upgrade": "NU7",
+        "reported_upgrade_height": 3543405,
+        "consensus_branch_id": "37a5165b"
+      },
+      "server_tip": 3533746,
+      "network_tip": 3533746,
+      "range": [
+        3533722,
+        3533745
+      ],
+      "complete": "pass",
+      "current": "pass",
+      "nu7": "pass",
+      "tally": {
+        "blocks": 24,
+        "shielded_txs": 35,
+        "commitments": 89,
+        "nullifiers": 85
+      },
+      "unverified_blocks": [],
+      "mismatches": [],
+      "notes": []
+    },
+    {
+      "server": "na.zec.rocks:443",
+      "route": "tor",
+      "checked_at": 1793204558,
+      "info": {
+        "software": "ECC LightWalletD v0.5.3",
+        "node": "Zakura:1.7.0",
+        "reported_upgrade": "NU7",
+        "reported_upgrade_height": 3543405,
+        "consensus_branch_id": "37a5165b"
+      },
+      "server_tip": 3533746,
+      "network_tip": 3533746,
+      "range": [
+        3533722,
+        3533745
+      ],
+      "complete": "pass",
+      "current": "pass",
+      "nu7": "pass",
+      "tally": {
+        "blocks": 24,
+        "shielded_txs": 35,
+        "commitments": 89,
+        "nullifiers": 85
+      },
+      "unverified_blocks": [],
+      "mismatches": [],
+      "notes": []
+    },
+    {
+      "server": "sa.zec.rocks:443",
+      "route": "tor",
+      "checked_at": 1793204561,
+      "info": {
+        "software": "ECC LightWalletD v0.5.3",
+        "node": "Zebra:7.0.0",
+        "reported_upgrade": "NU7",
+        "reported_upgrade_height": 3543405,
+        "consensus_branch_id": "37a5165b"
+      },
+      "server_tip": 3533746,
+      "network_tip": 3533746,
+      "range": [
+        3533722,
+        3533745
+      ],
+      "complete": "pass",
+      "current": "pass",
+      "nu7": "pass",
+      "tally": {
+        "blocks": 24,
+        "shielded_txs": 35,
+        "commitments": 89,
+        "nullifiers": 85
+      },
+      "unverified_blocks": [],
+      "mismatches": [],
+      "notes": []
+    },
+    {
+      "server": "eu.zec.rocks:443",
+      "route": "tor",
+      "checked_at": 1793204566,
+      "info": {
+        "software": "ECC LightWalletD v0.5.3",
+        "node": "Zebra:7.0.0",
+        "reported_upgrade": "NU7",
+        "reported_upgrade_height": 3543405,
+        "consensus_branch_id": "37a5165b"
+      },
+      "server_tip": 3533746,
+      "network_tip": 3533746,
+      "range": [
+        3533722,
+        3533745
+      ],
+      "complete": "pass",
+      "current": "pass",
+      "nu7": "pass",
+      "tally": {
+        "blocks": 24,
+        "shielded_txs": 35,
+        "commitments": 89,
+        "nullifiers": 85
+      },
+      "unverified_blocks": [],
+      "mismatches": [],
+      "notes": []
+    },
+    {
+      "server": "ap.zec.rocks:443",
+      "route": "tor",
+      "checked_at": 1793204576,
+      "info": {
+        "software": "ECC LightWalletD v0.5.3",
+        "node": "Zebra:7.0.0",
+        "reported_upgrade": "NU7",
+        "reported_upgrade_height": 3543405,
+        "consensus_branch_id": "37a5165b"
+      },
+      "server_tip": 3533746,
+      "network_tip": 3533746,
+      "range": [
+        3533722,
+        3533745
+      ],
+      "complete": "pass",
+      "current": "pass",
+      "nu7": "pass",
+      "tally": {
+        "blocks": 24,
+        "shielded_txs": 35,
+        "commitments": 89,
+        "nullifiers": 85
+      },
+      "unverified_blocks": [],
+      "mismatches": [],
+      "notes": []
+    },
+    {
+      "server": "us.zec.stardust.rest:443",
+      "route": "tor",
+      "checked_at": 1793204582,
+      "info": {
+        "software": "ECC LightWalletD v0.6.1",
+        "node": "Zakura:1.7.0",
+        "reported_upgrade": "NU7",
+        "reported_upgrade_height": 3543405,
+        "consensus_branch_id": "37a5165b"
+      },
+      "server_tip": 3533746,
+      "network_tip": 3533746,
+      "range": [
+        3533722,
+        3533745
+      ],
+      "complete": "pass",
+      "current": "pass",
+      "nu7": "pass",
+      "tally": {
+        "blocks": 24,
+        "shielded_txs": 35,
+        "commitments": 89,
+        "nullifiers": 85
+      },
+      "unverified_blocks": [],
+      "mismatches": [],
+      "notes": []
+    },
+    {
+      "server": "eu.zec.stardust.rest:443",
+      "route": "tor",
+      "checked_at": 1793204587,
+      "info": {
+        "software": "ECC LightWalletD v0.6.1",
+        "node": "Zakura:1.7.0",
+        "reported_upgrade": "NU7",
+        "reported_upgrade_height": 3543405,
+        "consensus_branch_id": "37a5165b"
+      },
+      "server_tip": 3533746,
+      "network_tip": 3533746,
+      "range": [
+        3533722,
+        3533745
+      ],
+      "complete": "pass",
+      "current": "pass",
+      "nu7": "pass",
+      "tally": {
+        "blocks": 24,
+        "shielded_txs": 35,
+        "commitments": 89,
+        "nullifiers": 85
+      },
+      "unverified_blocks": [],
+      "mismatches": [],
+      "notes": []
+    },
+    {
+      "server": "mainnet.zainod.zingolabs.dev:443",
+      "route": "tor",
+      "checked_at": 1793204591,
+      "info": {
+        "software": "zaino 0.11.0-alpha.4",
+        "node": "",
+        "reported_upgrade": "",
+        "reported_upgrade_height": 0,
+        "consensus_branch_id": "37a5165b"
+      },
+      "server_tip": 3533746,
+      "network_tip": 3533746,
+      "range": [
+        3533722,
+        3533745
+      ],
+      "complete": "pass",
+      "current": "pass",
+      "nu7": "unverified",
+      "tally": {
+        "blocks": 24,
+        "shielded_txs": 35,
+        "commitments": 89,
+        "nullifiers": 85
+      },
+      "unverified_blocks": [],
+      "mismatches": [],
+      "notes": [
+        "couldn't verify NU7: the server doesn't say which node it runs or what upgrade comes next"
+      ]
+    },
+    {
+      "server": "zec-node.cakewallet.com:443",
+      "route": "tor",
+      "checked_at": 1793204597,
+      "info": {
+        "software": "ECC LightWalletD v0.6.0",
+        "node": "Zakura:1.7.0",
+        "reported_upgrade": "NU7",
+        "reported_upgrade_height": 3543405,
+        "consensus_branch_id": "37a5165b"
+      },
+      "server_tip": 3533746,
+      "network_tip": 3533746,
+      "range": [
+        3533722,
+        3533745
+      ],
+      "complete": "pass",
+      "current": "pass",
+      "nu7": "pass",
+      "tally": {
+        "blocks": 24,
+        "shielded_txs": 35,
+        "commitments": 89,
+        "nullifiers": 85
+      },
+      "unverified_blocks": [],
+      "mismatches": [],
+      "notes": []
+    },
+    {
+      "server": "lwd.blakyniica.xyz:443",
+      "route": "tor",
+      "checked_at": 1793204602,
+      "info": {
+        "software": "",
+        "node": "",
+        "reported_upgrade": "",
+        "reported_upgrade_height": 0,
+        "consensus_branch_id": ""
+      },
+      "server_tip": 0,
+      "network_tip": null,
+      "range": null,
+      "complete": "unverified",
+      "current": "unverified",
+      "nu7": "unverified",
+      "tally": {
+        "blocks": 0,
+        "shielded_txs": 0,
+        "commitments": 0,
+        "nullifiers": 0
+      },
+      "unverified_blocks": [],
+      "mismatches": [],
+      "notes": [
+        "couldn't verify: could not reach lwd.blakyniica.xyz:443 over Tor: transport error: deadline has elapsed"
+      ]
+    },
+    {
+      "server": "zaino.unsafe.zec.rocks:443",
+      "route": "tor",
+      "checked_at": 1793204622,
+      "info": {
+        "software": "",
+        "node": "",
+        "reported_upgrade": "",
+        "reported_upgrade_height": 0,
+        "consensus_branch_id": ""
+      },
+      "server_tip": 0,
+      "network_tip": null,
+      "range": null,
+      "complete": "unverified",
+      "current": "unverified",
+      "nu7": "unverified",
+      "tally": {
+        "blocks": 0,
+        "shielded_txs": 0,
+        "commitments": 0,
+        "nullifiers": 0
+      },
+      "unverified_blocks": [],
+      "mismatches": [],
+      "notes": [
+        "couldn't verify: code: 'Internal error', message: \"protocol error: received message with invalid compression flag: 110 (valid flags are 0 and 1) while receiving response with status: 503 Service Unavailable\""
+      ]
+    },
+    {
+      "server": "lwd.z0n.jp:443",
+      "route": "tor",
+      "checked_at": 1793204624,
+      "info": {
+        "software": "ECC LightWalletD v0.6.1",
+        "node": "Zebra:7.0.0",
+        "reported_upgrade": "NU7",
+        "reported_upgrade_height": 3543405,
+        "consensus_branch_id": "37a5165b"
+      },
+      "server_tip": 3533746,
+      "network_tip": null,
+      "range": [
+        3533722,
+        3533745
+      ],
+      "complete": "pass",
+      "current": "unverified",
+      "nu7": "pass",
+      "tally": {
+        "blocks": 24,
+        "shielded_txs": 35,
+        "commitments": 89,
+        "nullifiers": 85
+      },
+      "unverified_blocks": [],
+      "mismatches": [],
+      "notes": []
+    },
+    {
+      "server": "l.ombie.cash:443",
+      "route": "tor",
+      "checked_at": 1793204659,
+      "info": {
+        "software": "ECC LightWalletD v0.6.1",
+        "node": "Zebra:7.0.0",
+        "reported_upgrade": "NU7",
+        "reported_upgrade_height": 3543405,
+        "consensus_branch_id": "37a5165b"
+      },
+      "server_tip": 3533746,
+      "network_tip": null,
+      "range": [
+        3533722,
+        3533745
+      ],
+      "complete": "pass",
+      "current": "unverified",
+      "nu7": "pass",
+      "tally": {
+        "blocks": 24,
+        "shielded_txs": 35,
+        "commitments": 89,
+        "nullifiers": 85
+      },
+      "unverified_blocks": [],
+      "mismatches": [],
+      "notes": []
+    },
+    {
+      "server": "zec.0xrpc.io:443",
+      "route": "tor",
+      "checked_at": 1793204664,
+      "info": {
+        "software": "ZingoLabs ZainoD 0.10.1",
+        "node": "Zebra:6.4.2",
+        "reported_upgrade": "NU6.3",
+        "reported_upgrade_height": 3428143,
+        "consensus_branch_id": "37a5165b"
+      },
+      "server_tip": 3533746,
+      "network_tip": null,
+      "range": [
+        3533722,
+        3533745
+      ],
+      "complete": "pass",
+      "current": "unverified",
+      "nu7": "fail",
+      "tally": {
+        "blocks": 24,
+        "shielded_txs": 35,
+        "commitments": 89,
+        "nullifiers": 85
+      },
+      "unverified_blocks": [],
+      "mismatches": [],
+      "notes": [
+        "node runs Zebra 6.4.2; Zebra 7.0.0 is the first release that follows NU7 on mainnet"
+      ]
+    },
+    {
+      "server": "z.ombie.cash:443",
+      "route": "tor",
+      "checked_at": 1793204668,
+      "info": {
+        "software": "ZingoLabs ZainoD 0.10.1",
+        "node": "Zebra:7.0.0",
+        "reported_upgrade": "NU7",
+        "reported_upgrade_height": 3543405,
+        "consensus_branch_id": "37a5165b"
+      },
+      "server_tip": 3533746,
+      "network_tip": null,
+      "range": [
+        3533722,
+        3533745
+      ],
+      "complete": "pass",
+      "current": "unverified",
+      "nu7": "pass",
+      "tally": {
+        "blocks": 24,
+        "shielded_txs": 35,
+        "commitments": 89,
+        "nullifiers": 85
+      },
+      "unverified_blocks": [],
+      "mismatches": [],
+      "notes": []
+    },
+    {
+      "server": "lwd.bunny-zec.xyz:443",
+      "route": "tor",
+      "checked_at": 1793204672,
+      "info": {
+        "software": "ECC LightWalletD v0.5.5",
+        "node": "Zebra:7.0.0",
+        "reported_upgrade": "NU7",
+        "reported_upgrade_height": 3543405,
+        "consensus_branch_id": "37a5165b"
+      },
+      "server_tip": 3533746,
+      "network_tip": null,
+      "range": [
+        3533722,
+        3533745
+      ],
+      "complete": "pass",
+      "current": "unverified",
+      "nu7": "pass",
+      "tally": {
+        "blocks": 24,
+        "shielded_txs": 35,
+        "commitments": 89,
+        "nullifiers": 85
+      },
+      "unverified_blocks": [],
+      "mismatches": [],
+      "notes": []
+    },
+    {
+      "server": "http://lwd.zcashexplorer.app:9067",
+      "route": "tor",
+      "checked_at": 1793204679,
+      "info": {
+        "software": "",
+        "node": "",
+        "reported_upgrade": "",
+        "reported_upgrade_height": 0,
+        "consensus_branch_id": ""
+      },
+      "server_tip": 0,
+      "network_tip": null,
+      "range": null,
+      "complete": "unverified",
+      "current": "unverified",
+      "nu7": "unverified",
+      "tally": {
+        "blocks": 0,
+        "shielded_txs": 0,
+        "commitments": 0,
+        "nullifiers": 0
+      },
+      "unverified_blocks": [],
+      "mismatches": [],
+      "notes": [
+        "couldn't verify: code: 'Internal error', message: \"h2 protocol error: http2 error\", source: tonic::transport::Error(Transport, hyper::Error(Http2, Error { kind: GoAway(b\"\", FRAME_SIZE_ERROR, Library) })): transport error: http2 error: connection error detected: frame with invalid size"
+      ]
+    },
+    {
+      "server": "http://zec.alexxiy.top:9067",
+      "route": "tor",
+      "checked_at": 1793204680,
+      "info": {
+        "software": "",
+        "node": "",
+        "reported_upgrade": "",
+        "reported_upgrade_height": 0,
+        "consensus_branch_id": ""
+      },
+      "server_tip": 0,
+      "network_tip": null,
+      "range": null,
+      "complete": "unverified",
+      "current": "unverified",
+      "nu7": "unverified",
+      "tally": {
+        "blocks": 0,
+        "shielded_txs": 0,
+        "commitments": 0,
+        "nullifiers": 0
+      },
+      "unverified_blocks": [],
+      "mismatches": [],
+      "notes": [
+        "couldn't verify: code: 'Unknown error', message: \"transport error\", source: tonic::transport::Error(Transport, hyper::Error(Io, Custom { kind: BrokenPipe, error: \"stream closed because of a broken pipe\" })): transport error: connection error: stream closed because of a broken pipe"
+      ]
+    }
+  ],
+  "test": {
+    "server": "test server (one note removed)",
+    "route": "test",
+    "checked_at": 1793204682,
+    "info": {
+      "software": "ECC LightWalletD v0.5.3",
+      "node": "Zebra:7.0.0",
+      "reported_upgrade": "NU7",
+      "reported_upgrade_height": 3543405,
+      "consensus_branch_id": "37a5165b"
+    },
+    "server_tip": 3533746,
+    "network_tip": null,
+    "range": [
+      3533722,
+      3533745
+    ],
+    "complete": "fail",
+    "current": "unverified",
+    "nu7": "pass",
+    "tally": {
+      "blocks": 24,
+      "shielded_txs": 34,
+      "commitments": 87,
+      "nullifiers": 83
+    },
+    "unverified_blocks": [],
+    "mismatches": [
+      {
+        "height": 3533742,
+        "txid": "022336f43a4818ce6967101e5aa91089ce5654e7417f45fca1979c46fd5cff13",
+        "tx_index": 2,
+        "what": "Ironwood actions: block has 2, server sent 1"
+      }
+    ],
+    "notes": [
+      "Test: dropped one Ironwood note from transaction 022336f43a4818ce6967101e5aa91089ce5654e7417f45fca1979c46fd5cff13 in block 3533742."
+    ],
+    "consistency_only": {
+      "status": "pass",
+      "detail": "heights, links and tree sizes all add up"
+    }
+  }
+}

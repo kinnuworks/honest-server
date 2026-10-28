@@ -167,16 +167,19 @@ pub fn consistency_only(blocks: &[CompactBlock]) -> Result<(), String> {
 /// consistent. Returns the altered blocks and a description of the change.
 pub fn drop_one_note(blocks: &[CompactBlock]) -> Option<(Vec<CompactBlock>, String)> {
     let mut out = blocks.to_vec();
+    // Prefer a transaction with two or more notes in a pool, so the change
+    // is one missing note rather than a missing transaction.
+    for min in [2usize, 1] {
     for bi in (0..out.len()).rev() {
         for ti in 0..out[bi].vtx.len() {
             let tx = &mut out[bi].vtx[ti];
-            let (pool, removed) = if !tx.ironwood_actions.is_empty() {
+            let (pool, removed) = if tx.ironwood_actions.len() >= min {
                 tx.ironwood_actions.pop();
                 ("Ironwood", 2)
-            } else if !tx.actions.is_empty() {
+            } else if tx.actions.len() >= min {
                 tx.actions.pop();
                 ("Orchard", 1)
-            } else if !tx.outputs.is_empty() {
+            } else if tx.outputs.len() >= min {
                 tx.outputs.pop();
                 ("Sapling", 0)
             } else {
@@ -197,6 +200,7 @@ pub fn drop_one_note(blocks: &[CompactBlock]) -> Option<(Vec<CompactBlock>, Stri
             }
             return Some((out, desc));
         }
+    }
     }
     None
 }

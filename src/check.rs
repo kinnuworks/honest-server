@@ -267,16 +267,11 @@ async fn fetch_server(server: &str, route: &Route, window: u64, r: &mut CheckRes
 
 /// Compares the server's blocks with the reference and fills in the verdicts.
 pub async fn judge(r: &mut CheckResult, blocks: &[CompactBlock], reference: &mut Reference) {
-    // NU7: what the server's node reports about the upgrade.
-    r.nu7 = if r.server_tip >= NU7_HEIGHT && r.info.consensus_branch_id.eq_ignore_ascii_case("77190ad9") {
-        Status::Pass
-    } else if r.info.reported_upgrade.eq_ignore_ascii_case("NU7") && r.info.reported_upgrade_height == NU7_HEIGHT {
-        Status::Pass
-    } else if r.info.reported_upgrade.is_empty() && r.server_tip < NU7_HEIGHT {
-        Status::Fail
-    } else {
-        Status::Unverified
-    };
+    let (nu7, why) = nu7_status(r);
+    r.nu7 = nu7;
+    if let Some(why) = why {
+        r.notes.push(why);
+    }
 
     let wanted: Vec<(u64, [u8; 32])> = blocks
         .iter()
@@ -340,6 +335,49 @@ pub async fn judge(r: &mut CheckResult, blocks: &[CompactBlock], reference: &mut
             }
         }
     }
+}
+
+/// First node releases that follow NU7 on mainnet (Zebra 7.0.0 and Zakura
+/// 1.7.0 release notes, 2026-10-22).
+const NU7_READY: &[(&str, [u32; 3])] = &[("Zebra", [7, 0, 0]), ("Zakura", [1, 7, 0])];
+
+fn parse_version(v: &str) -> Option<([u32; 3], bool)> {
+    let pre = v.contains('-');
+    let core = v.split(['-', '+']).next()?;
+    let mut parts = core.split('.').map(|p| p.parse::<u32>().ok());
+    Some(([parts.next()??, parts.next()??, parts.next().flatten().unwrap_or(0)], pre))
+}
+
+/// NU7 readiness from what the server reports: an active NU7 branch, the
+/// node's release, or the announced upgrade. A missing answer is grey.
+fn nu7_status(r: &CheckResult) -> (Status, Option<String>) {
+    if r.server_tip >= NU7_HEIGHT {
+        return if r.info.consensus_branch_id.eq_ignore_ascii_case("77190ad9") {
+            (Status::Pass, None)
+        } else {
+            (Status::Fail, Some(format!("past block {NU7_HEIGHT} but not on the NU7 branch")))
+        };
+    }
+    if let Some((name, ver)) = r.info.node.split_once(':') {
+        if let Some(&(_, ready)) = NU7_READY.iter().find(|(n, _)| *n == name) {
+            if let Some((v, pre)) = parse_version(ver) {
+                if v < ready || (v == ready && pre) {
+                    return (
+                        Status::Fail,
+                        Some(format!(
+                            "node runs {name} {ver}; {name} {}.{}.{} is the first release that follows NU7 on mainnet",
+                            ready[0], ready[1], ready[2]
+                        )),
+                    );
+                }
+                return (Status::Pass, None);
+            }
+        }
+    }
+    if r.info.reported_upgrade.eq_ignore_ascii_case("NU7") && r.info.reported_upgrade_height == NU7_HEIGHT {
+        return (Status::Pass, None);
+    }
+    (Status::Unverified, Some("couldn't verify NU7: the server doesn't say which node it runs or what upgrade comes next".into()))
 }
 
 /// The labelled test row: real data from `base`, with one shielded note

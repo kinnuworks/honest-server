@@ -1,0 +1,21 @@
+# Default servers in Zodl (Android and iOS)
+zec.rocks:443
+na.zec.rocks:443
+sa.zec.rocks:443
+eu.zec.rocks:443
+ap.zec.rocks:443
+us.zec.stardust.rest:443
+eu.zec.stardust.rest:443
+# Default server in Zingo
+mainnet.zainod.zingolabs.dev:443
+# Community servers
+zec-node.cakewallet.com:443
+lwd.blakyniica.xyz:443
+zaino.unsafe.zec.rocks:443
+lwd.z0n.jp:443
+l.ombie.cash:443
+zec.0xrpc.io:443
+z.ombie.cash:443
+lwd.bunny-zec.xyz:443
+http://lwd.zcashexplorer.app:9067
+http://zec.alexxiy.top:9067

@@ -41,14 +41,23 @@ pub async fn connect(server: &str, route: &Route) -> Result<Client> {
         Route::Direct => ep.connect().await.with_context(|| format!("could not reach {server}"))?,
         Route::Tor(proxy) => {
             let proxy = proxy.clone();
+            // Tor gives each distinct SOCKS username its own circuit, so every
+            // check leaves from a different exit and can't be linked to the others.
+            let circuit = format!("{:016x}", rand_u64());
             let connector = tower::service_fn(move |uri: Uri| {
                 let proxy = proxy.clone();
+                let circuit = circuit.clone();
                 async move {
                     let host = uri.host().unwrap_or_default().to_string();
                     let port = uri.port_u16().unwrap_or(443);
-                    let s = tokio_socks::tcp::Socks5Stream::connect(proxy.as_str(), (host.as_str(), port))
-                        .await
-                        .map_err(std::io::Error::other)?;
+                    let s = tokio_socks::tcp::Socks5Stream::connect_with_password(
+                        proxy.as_str(),
+                        (host.as_str(), port),
+                        &circuit,
+                        "x",
+                    )
+                    .await
+                    .map_err(std::io::Error::other)?;
                     Ok::<_, std::io::Error>(TokioIo::new(s.into_inner()))
                 }
             });
@@ -58,6 +67,14 @@ pub async fn connect(server: &str, route: &Route) -> Result<Client> {
         }
     };
     Ok(CompactTxStreamerClient::new(channel).max_decoding_message_size(64 * 1024 * 1024))
+}
+
+fn rand_u64() -> u64 {
+    let t = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_nanos())
+        .unwrap_or(0);
+    u64::from_le_bytes(crate::p2p::dsha256(&t.to_le_bytes())[..8].try_into().unwrap())
 }
 
 pub async fn info(c: &mut Client) -> Result<LightdInfo> {

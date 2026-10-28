@@ -249,6 +249,32 @@ impl Peer {
         }
     }
 
+    /// Asks the peer for addresses of other peers (IPv4 on port 8233 only).
+    pub async fn get_addrs(&mut self) -> Result<Vec<SocketAddr>> {
+        self.send("getaddr", &[]).await?;
+        loop {
+            let (cmd, payload) = self.recv(Duration::from_secs(10)).await?;
+            if cmd != "addr" {
+                continue;
+            }
+            let mut pos = 0;
+            let n = read_compact_size(&payload, &mut pos)? as usize;
+            let mut out = Vec::new();
+            for i in 0..n {
+                let e = payload.get(pos + i * 30..pos + (i + 1) * 30).ok_or_else(|| anyhow!("truncated addr"))?;
+                let ip = &e[12..28];
+                let port = u16::from_be_bytes([e[28], e[29]]);
+                if ip[..12] == [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xff, 0xff] && port == 8233 {
+                    out.push(SocketAddr::from(([ip[12], ip[13], ip[14], ip[15]], port)));
+                }
+            }
+            // A one-entry addr is usually the peer announcing itself; wait for the list.
+            if n > 1 {
+                return Ok(out);
+            }
+        }
+    }
+
     /// Fetches full blocks by hash (internal byte order). Blocks the peer
     /// doesn't have are left out.
     pub async fn get_blocks(&mut self, hashes: &[[u8; 32]]) -> Result<Vec<Vec<u8>>> {
@@ -299,22 +325,41 @@ pub async fn seed_addresses() -> Vec<SocketAddr> {
 /// Connects to up to `want` peers in parallel and keeps the ones that finish
 /// the handshake and advertise at least `min_version`.
 pub async fn connect_peers(want: usize, min_version: i32) -> Vec<Peer> {
-    let addrs = seed_addresses().await;
-    let mut set = tokio::task::JoinSet::new();
-    for a in addrs {
-        set.spawn(async move { Peer::connect(a).await });
-    }
-    let mut peers = Vec::new();
-    while let Some(res) = set.join_next().await {
-        if let Ok(Ok(p)) = res {
-            if p.version >= min_version {
-                peers.push(p);
-                if peers.len() >= want {
-                    break;
-                }
+    let mut tried: Vec<SocketAddr> = Vec::new();
+    let mut candidates = seed_addresses().await;
+    let mut peers: Vec<Peer> = Vec::new();
+    // Seeds first, then up to two rounds of addresses learned from peers.
+    for _round in 0..3 {
+        let batch: Vec<SocketAddr> = candidates.drain(..).filter(|a| !tried.contains(a)).collect();
+        if batch.is_empty() {
+            break;
+        }
+        tried.extend(&batch);
+        let mut set = tokio::task::JoinSet::new();
+        for a in batch {
+            set.spawn(async move { Peer::connect(a).await });
+        }
+        let mut found = Vec::new();
+        while let Some(res) = set.join_next().await {
+            if let Ok(Ok(p)) = res {
+                found.push(p);
             }
         }
+        for (i, mut p) in found.into_iter().enumerate() {
+            if i < 4 && peers.len() < want {
+                if let Ok(more) = p.get_addrs().await {
+                    candidates.extend(more.into_iter().filter(|a| !tried.contains(a)));
+                }
+            }
+            if p.version >= min_version && peers.len() < want {
+                peers.push(p);
+            }
+        }
+        candidates.sort();
+        candidates.dedup();
+        if peers.len() >= want {
+            break;
+        }
     }
-    set.abort_all();
     peers
 }
