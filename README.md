@@ -20,7 +20,7 @@ honest-server check zec.rocks:443 --test-drop-note
 
 The first command checks the server for real. The second takes the same real data, removes one shielded note and patches the tree sizes so the chain still adds up, then shows that Honest Server catches it.
 
-`honest-server selftest zec.rocks:443` goes further: it makes every single change it can to the server's real blocks and counts how many the check catches. The live page shows the latest run. On Oct 28 2026 at 17:51 UTC, on 24 mainnet blocks, it tried 1,893 changes across Sapling, Orchard and Ironwood (Zcash's three shielded pools) and caught all 1,893.
+`honest-server selftest zec.rocks:443` goes further: it makes every single change it can to the server's real blocks and counts how many the check catches. In the hourly run of Oct 28 2026 at 19:40 UTC (the one in the demo video), it tried 1,358 changes to 24 mainnet blocks across Sapling, Orchard and Ironwood (Zcash's three shielded pools) and caught all 1,358. The number changes every run, because it depends on how many notes the latest blocks hold; the live page shows the newest count.
 
 ## Protect your wallet
 
