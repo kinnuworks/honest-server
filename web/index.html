@@ -47,7 +47,7 @@
 <nav class="ui-nav">
   <div class="ui-nav__inner page">
     <a class="ui-nav__brand" href="#top">Honest Server</a>
-    <span class="ui-nav__links"><a href="#servers">Public servers</a> | <a href="#own">Check your own server</a> | <a href="#how">How it works</a> | <a href="results.json">results.json</a></span>
+    <span class="ui-nav__links"><a href="#servers">Public servers</a> | <a href="#own">Check your own server</a> | <a href="#protect">Protect your wallet</a> | <a href="#how">How it works</a> | <a href="results.json">results.json</a></span>
   </div>
 </nav>
 
@@ -97,6 +97,13 @@
     <pre class="cmd"><code>cargo install --git https://github.com/kinnuworks/honest-server
 honest-server check zec.rocks:443
 honest-server check zec.rocks:443 --test-drop-note</code></pre>
+  </section>
+
+  <section class="section page" id="protect">
+    <h2>Protect your wallet</h2>
+    <p>Run a light-wallet server on your own machine and point your wallet at it. It forwards every call to the real server, over Tor if you ask, so the server sees a Tor exit instead of your IP. Before your wallet gets any recent block, it checks the block against verified blocks from Zcash peers, and refuses one that doesn't match.</p>
+    <pre class="cmd"><code>honest-server proxy zec.rocks:443 --tor 127.0.0.1:9050
+# then set your wallet's server to http://127.0.0.1:9067</code></pre>
   </section>
 
   <section class="section page" id="how">

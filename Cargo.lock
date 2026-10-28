@@ -953,6 +953,7 @@ dependencies = [
  "sha2 0.11.1",
  "tokio",
  "tokio-socks",
+ "tokio-stream",
  "tonic",
  "tonic-prost",
  "tonic-prost-build",
@@ -2281,6 +2282,7 @@ dependencies = [
  "futures-core",
  "pin-project-lite",
  "tokio",
+ "tokio-util",
 ]
 
 [[package]]

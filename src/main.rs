@@ -3,6 +3,7 @@ mod compare;
 mod lwd;
 mod mutate;
 mod p2p;
+mod proxy;
 mod verify;
 
 use anyhow::Result;
@@ -35,6 +36,27 @@ enum Cmd {
         json: bool,
         /// Test mode: remove one real shielded note from the server's answer
         /// (and patch the tree sizes) to show what a lying server looks like
+        #[arg(long)]
+        test_drop_note: bool,
+    },
+    /// Run a light-wallet server on this machine for your wallet. It forwards
+    /// everything to `server` and refuses recent blocks that don't match the
+    /// verified blocks from Zcash peers.
+    Proxy {
+        /// The real server, e.g. zec.rocks:443
+        server: String,
+        #[arg(long, default_value = "127.0.0.1:9067")]
+        listen: String,
+        /// Reach the server through a Tor SOCKS proxy, e.g. 127.0.0.1:9050
+        #[arg(long)]
+        tor: Option<String>,
+        /// Check blocks within this many blocks of the tip
+        #[arg(long, default_value_t = 100)]
+        window: u64,
+        /// Also refuse blocks that two peers couldn't confirm
+        #[arg(long)]
+        strict: bool,
+        /// Test mode: drop one real note before checking, to see a refusal
         #[arg(long)]
         test_drop_note: bool,
     },
@@ -123,6 +145,28 @@ async fn main() -> Result<()> {
                 }
                 None => anyhow::bail!("couldn't get verified blocks from {server}"),
             }
+        }
+        Cmd::Proxy { server, listen, tor, window, strict, test_drop_note } => {
+            let route = tor.map(Route::Tor).unwrap_or(Route::Direct);
+            eprintln!("Connecting to Zcash peers...");
+            let reference = Reference::new(4).await?;
+            let upstream = lwd::connect(&server, &route).await?;
+            let addr: std::net::SocketAddr = listen.parse()?;
+            eprintln!(
+                "Light-wallet server on http://{addr}, forwarding to {server} ({}). Recent blocks are checked against Zcash peers.",
+                match route { Route::Direct => "direct", Route::Tor(_) => "over Tor" }
+            );
+            let svc = proxy::Proxy {
+                upstream,
+                reference: std::sync::Arc::new(tokio::sync::Mutex::new(reference)),
+                window,
+                strict,
+                test_drop_note,
+            };
+            tonic::transport::Server::builder()
+                .add_service(lwd::rpc::compact_tx_streamer_server::CompactTxStreamerServer::new(svc).max_decoding_message_size(64 * 1024 * 1024))
+                .serve(addr)
+                .await?;
         }
         Cmd::Peers => {
             let all = p2p::connect_peers(30, 0).await;

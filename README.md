@@ -22,6 +22,22 @@ The first command checks the server for real. The second takes the same real dat
 
 `honest-server selftest zec.rocks:443` goes further: it makes every single change it can to the server's real blocks and counts how many the check catches. The live page shows the latest run. On Oct 28 2026 at 17:51 UTC, on 24 mainnet blocks, it tried 1,893 changes across Sapling, Orchard and Ironwood (Zcash's three shielded pools) and caught all 1,893.
 
+## Protect your wallet
+
+`honest-server proxy` runs a light-wallet server on your own machine. Point your wallet's custom server setting at it (the wallet has to accept a plain local address such as `http://127.0.0.1:9067`):
+
+```bash
+honest-server proxy zec.rocks:443 --tor 127.0.0.1:9050
+```
+
+It forwards every call to the real server, over Tor if you pass `--tor`, so the server sees a Tor exit instead of your IP. Before it hands your wallet any block from the last 100, it checks the block against the verified blocks from Zcash peers, in batches of 16. A block that doesn't match is refused, and your wallet gets an error naming the block, the transaction and the field, instead of silently missing a payment. `--strict` also refuses blocks that two peers couldn't confirm. `--test-drop-note` removes one real note before the check, so you can see a refusal:
+
+```
+REFUSED Honest Server refused block 3533812 from the server: transaction 1df0be5bbff4d19c...: Ironwood actions: block has 2, server sent 1
+```
+
+Older blocks, outside the window, pass through unchecked.
+
 ## What it checks
 
 For each server, over a window of recent blocks (24 by default):
@@ -70,6 +86,7 @@ Pass `--tor 127.0.0.1:9050` to run your own check over Tor too.
 honest-server check <host:port> [--blocks 24] [--tor 127.0.0.1:9050] [--json] [--test-drop-note]
 honest-server table --servers servers.txt --out web/results.json [--tor 127.0.0.1:9050]
 honest-server selftest <host:port> [--blocks 24]
+honest-server proxy <host:port> [--listen 127.0.0.1:9067] [--tor 127.0.0.1:9050] [--window 100] [--strict] [--test-drop-note]
 honest-server peers
 ```
 

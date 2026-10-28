@@ -101,6 +101,16 @@ impl Reference {
         Ok(Reference { peers, cache: HashMap::new(), network_tip: None })
     }
 
+    /// Compares a compact block with its verified full block. None if the
+    /// reference couldn't verify that block.
+    pub fn compare(&self, b: &CompactBlock) -> Option<Vec<Mismatch>> {
+        let hash = <[u8; 32]>::try_from(b.hash.as_slice()).ok()?;
+        match self.cache.get(&hash) {
+            Some(Some((full, _))) => Some(compare::compare_block(full, b, &mut Tally::default())),
+            _ => None,
+        }
+    }
+
     pub fn peer_summary(&self) -> Vec<String> {
         self.peers.iter().map(|p| format!("{} ({})", p.user_agent, p.start_height)).collect()
     }
@@ -120,7 +130,7 @@ impl Reference {
 
     /// Fetches the blocks with these hashes from at least two peers. A block
     /// counts as verified when two peers serve it and it passes every check.
-    async fn fetch(&mut self, wanted: &[(u64, [u8; 32])]) {
+    pub async fn fetch(&mut self, wanted: &[(u64, [u8; 32])]) {
         self.top_up().await;
         let todo: Vec<(u64, [u8; 32])> =
             wanted.iter().filter(|(_, h)| !self.cache.contains_key(h)).cloned().collect();
