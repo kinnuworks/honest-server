@@ -31,6 +31,14 @@
   .servers td .note { display: block; color: var(--ink-3); font-size: var(--fs-small); margin-top: 4px; white-space: normal; max-width: 52ch; }
   .servers td .note.warn { color: var(--bad); }
   .servers td:not(:first-child) { white-space: nowrap; }
+  @media (min-width: 641px) {
+    /* Fixed columns, so a long verdict wraps inside its cell instead of pushing NU7 out of the frame. */
+    .servers { table-layout: fixed; width: 100%; }
+    .servers th:first-child { width: 46%; }
+    .servers td:not(:first-child), .servers th:not(:first-child) { white-space: normal; }
+    .servers .ui-pill { white-space: normal; line-height: 1.25; }
+    .servers .ui-pill::before { flex-shrink: 0; }
+  }
   .ui-hero__deck a, .ui-hero__proof a { color: var(--act); text-underline-offset: 3px; }
   .servers th small { display: block; font-family: var(--font-body); font-size: var(--fs-small); text-transform: none; letter-spacing: 0; color: var(--ink-3); font-weight: 400; margin-top: 2px; }
   .unreach { font-size: var(--fs-small); margin: var(--s-3) var(--s-4); }
@@ -192,12 +200,19 @@ function facts(r) {
   return bits.length ? `<span class="note">${bits.join(" · ")}</span>` : "";
 }
 
+// Say why a check couldn't verify when the run left no note about it.
+function unverifiedWhy(r) {
+  const out = [];
+  if (r.range && r.current === "unverified" && !r.notes.some(x => /behind|fork|peers don't know/.test(x))) out.push("Current couldn't be verified: the peers' headers didn't confirm the server's tip in this run");
+  return out;
+}
+
 function problems(r) {
   // An NU7 failure on a server whose data matched is an upgrade risk, not a lie; say so.
   const upgrade = x => r.complete === "pass" && /^node runs/.test(x) ? `Data matched; the problem is the upgrade. ${x[0].toUpperCase()}${x.slice(1)}` : x;
   const lines = r.notes.filter(x => !/^Tor exit/.test(x)).map(upgrade).map(esc);
   for (const m of r.mismatches.slice(0, 3)) lines.push(`Block ${n(m.height)}, transaction ${esc(m.txid.slice(0, 16))}...: ${esc(m.what)}`);
-  return lines.map(l => `<span class="note warn">${l}</span>`).join("");
+  return lines.map(l => `<span class="note warn">${l}</span>`).join("") + unverifiedWhy(r).map(l => `<span class="note">${esc(l)}</span>`).join("");
 }
 
 function row(r) {
@@ -278,7 +293,7 @@ function renderServers(t) {
   const lie = count("complete", "fail") ? "" : ` No server was caught lying in this run. <a href="#lie">Fig. 2</a> shows what a caught lie looks like.`;
   $("summary").innerHTML = `<strong>${parts.join(". ")}.</strong>${lie} Last checked ${when(t.generated_at)}.`;
   const deep = S.find(r => r.history);
-  $("status").textContent = `${S.length} servers · ${t.blocks_per_check} recent blocks each${deep ? `, ${n(deep.history.to - deep.history.from + 1)} more through the note trees` : ""} · over Tor`;
+  $("status").textContent = `${S.length} servers · ${t.blocks_per_check} recent blocks${deep ? ` + ${n(deep.history.to - deep.history.from + 1)} earlier` : ""} · over Tor`;
   const bad = r => r.complete === "fail" || r.current === "fail" || r.nu7 === "fail";
   const shown = [...S.filter(r => r.range && bad(r)), ...S.filter(r => r.range && !bad(r))];
   const unreachable = S.filter(r => !r.range);
