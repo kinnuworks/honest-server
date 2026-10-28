@@ -204,3 +204,109 @@ pub fn drop_one_note(blocks: &[CompactBlock]) -> Option<(Vec<CompactBlock>, Stri
     }
     None
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::lwd::rpc::{ChainMetadata, CompactSaplingOutput, CompactSaplingSpend};
+    use crate::verify::{verify_block, VerifiedBlock};
+
+    const RAW: &[u8] = include_bytes!("../tests/fixtures/block-3533761.bin");
+
+    fn full() -> VerifiedBlock {
+        let hash = zcash_primitives::block::BlockHeader::read(RAW).unwrap().hash().0;
+        verify_block(RAW, &hash, 3_533_761).unwrap()
+    }
+
+    /// The compact block an honest server would send for `full`.
+    fn honest(full: &VerifiedBlock) -> CompactBlock {
+        let action = |a: &crate::verify::ActionData| CompactOrchardAction {
+            nullifier: a.nullifier.to_vec(),
+            cmx: a.cmx.to_vec(),
+            ephemeral_key: a.epk.to_vec(),
+            ciphertext: a.ciphertext.clone(),
+        };
+        CompactBlock {
+            height: 3_533_761,
+            vtx: full
+                .txs
+                .iter()
+                .map(|t| CompactTx {
+                    index: t.index as u64,
+                    txid: t.txid.to_vec(),
+                    spends: t.sapling_nullifiers.iter().map(|n| CompactSaplingSpend { nf: n.to_vec() }).collect(),
+                    outputs: t
+                        .sapling_outputs
+                        .iter()
+                        .map(|o| CompactSaplingOutput {
+                            cmu: o.cmu.to_vec(),
+                            ephemeral_key: o.epk.to_vec(),
+                            ciphertext: o.ciphertext.clone(),
+                        })
+                        .collect(),
+                    actions: t.orchard_actions.iter().map(action).collect(),
+                    ironwood_actions: t.ironwood_actions.iter().map(action).collect(),
+                    ..Default::default()
+                })
+                .collect(),
+            chain_metadata: Some(ChainMetadata::default()),
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn honest_block_matches() {
+        let f = full();
+        let mut tally = Tally::default();
+        assert!(compare_block(&f, &honest(&f), &mut tally).is_empty());
+        assert!(tally.commitments > 0 && tally.nullifiers > 0);
+    }
+
+    #[test]
+    fn dropped_note_is_caught_and_consistency_check_misses_it() {
+        let f = full();
+        let prev = CompactBlock {
+            height: 3_533_760,
+            hash: vec![1; 32],
+            chain_metadata: Some(ChainMetadata::default()),
+            ..Default::default()
+        };
+        let mut cur = honest(&f);
+        cur.prev_hash = prev.hash.clone();
+        let count = |f: fn(&CompactTx) -> usize| cur.vtx.iter().map(f).sum::<usize>() as u32;
+        cur.chain_metadata = Some(ChainMetadata {
+            sapling_commitment_tree_size: count(|t| t.outputs.len()),
+            orchard_commitment_tree_size: count(|t| t.actions.len()),
+            ironwood_commitment_tree_size: count(|t| t.ironwood_actions.len()),
+        });
+        let (altered, _) = drop_one_note(&[prev, cur]).unwrap();
+        assert!(consistency_only(&altered).is_ok(), "the lie is consistent");
+        let mismatches = compare_block(&f, &altered[1], &mut Tally::default());
+        assert_eq!(mismatches.len(), 1);
+    }
+
+    #[test]
+    fn changed_nullifier_is_caught() {
+        let f = full();
+        let mut c = honest(&f);
+        let tx = c.vtx.iter_mut().find(|t| !t.ironwood_actions.is_empty() || !t.actions.is_empty()).unwrap();
+        let a = tx.ironwood_actions.first_mut().or(tx.actions.first_mut()).unwrap();
+        a.nullifier[0] ^= 1;
+        let m = compare_block(&f, &c, &mut Tally::default());
+        assert!(m.iter().any(|m| m.what.contains("nullifier differs")));
+    }
+
+    #[test]
+    fn extra_transaction_is_caught() {
+        let f = full();
+        let mut c = honest(&f);
+        c.vtx.push(CompactTx {
+            index: 999,
+            txid: vec![9; 32],
+            spends: vec![CompactSaplingSpend { nf: vec![0; 32] }],
+            ..Default::default()
+        });
+        let m = compare_block(&f, &c, &mut Tally::default());
+        assert!(m.iter().any(|m| m.what.contains("does not contain")));
+    }
+}

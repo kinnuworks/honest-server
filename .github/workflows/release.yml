@@ -1,0 +1,29 @@
+name: release
+
+# Builds the command-line tool for Linux and macOS when a tag is pushed.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            name: honest-server-linux-x86_64
+          - os: macos-latest
+            name: honest-server-macos-arm64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo test --release
+      - run: cargo build --release
+      - run: cp target/release/honest-server ${{ matrix.name }}
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ matrix.name }}

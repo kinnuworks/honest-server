@@ -1,0 +1,48 @@
+name: table
+
+# Checks every server in servers.txt over Tor and publishes web/ with the
+# fresh results.json.
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: table
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Start Tor
+        run: |
+          sudo apt-get update -q && sudo apt-get install -yq tor
+          sudo systemctl start tor
+          for i in $(seq 1 60); do
+            if curl -s --socks5-hostname 127.0.0.1:9050 https://check.torproject.org/api/ip | grep -q '"IsTor":true'; then break; fi
+            sleep 2
+          done
+      - run: cargo build --release
+      - run: ./target/release/honest-server table --servers servers.txt --out web/results.json --tor 127.0.0.1:9050
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: web
+  deploy:
+    needs: check
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.pages.outputs.page_url }}
+    steps:
+      - id: pages
+        uses: actions/deploy-pages@v4

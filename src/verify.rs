@@ -228,3 +228,60 @@ fn coinbase_height(raw_tx: &[u8]) -> Result<u32> {
     h[..push].copy_from_slice(bytes);
     Ok(u32::from_le_bytes(h))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // Real mainnet blocks fetched over P2P. 3,533,761 has Sapling, Orchard
+    // and Ironwood activity; 3,533,600 holds only the coinbase.
+    pub const BLOCK_3533761: &[u8] = include_bytes!("../tests/fixtures/block-3533761.bin");
+    const BLOCK_3533600: &[u8] = include_bytes!("../tests/fixtures/block-3533600.bin");
+
+    fn hash_of(raw: &[u8]) -> [u8; 32] {
+        BlockHeader::read(raw).unwrap().hash().0
+    }
+
+    #[test]
+    fn real_blocks_verify() {
+        for (raw, h) in [(BLOCK_3533761, 3_533_761), (BLOCK_3533600, 3_533_600)] {
+            let b = verify_block(raw, &hash_of(raw), h).expect("real block verifies");
+            assert_eq!(b.height, h);
+        }
+        let b = verify_block(BLOCK_3533761, &hash_of(BLOCK_3533761), 3_533_761).unwrap();
+        assert!(b.txs.iter().any(|t| !t.ironwood_actions.is_empty()), "fixture has Ironwood actions");
+    }
+
+    #[test]
+    fn wrong_height_is_rejected() {
+        assert!(verify_block(BLOCK_3533761, &hash_of(BLOCK_3533761), 3_533_760).is_err());
+    }
+
+    #[test]
+    fn wrong_hash_is_rejected() {
+        assert!(verify_block(BLOCK_3533761, &hash_of(BLOCK_3533600), 3_533_761).is_err());
+    }
+
+    #[test]
+    fn changed_transaction_byte_is_rejected() {
+        // Flip a byte near the end, inside the last transaction.
+        let mut raw = BLOCK_3533761.to_vec();
+        let i = raw.len() - 100;
+        raw[i] ^= 1;
+        assert!(verify_block(&raw, &hash_of(BLOCK_3533761), 3_533_761).is_err());
+    }
+
+    #[test]
+    fn bad_equihash_solution_is_rejected() {
+        let mut raw = BLOCK_3533761[..1487].to_vec();
+        raw[1000] ^= 1;
+        assert!(verify_header(&raw).is_err());
+        assert!(verify_header(&BLOCK_3533761[..1487]).is_ok());
+    }
+
+    #[test]
+    fn merkle_root_of_one_txid_is_the_txid() {
+        let t = [7u8; 32];
+        assert_eq!(merkle_root(&[t]), t);
+    }
+}
