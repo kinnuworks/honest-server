@@ -74,6 +74,9 @@ pub struct ShieldedTx {
     pub sapling_anchors: Vec<[u8; 32]>,
     pub orchard_anchor: Option<[u8; 32]>,
     pub ironwood_anchor: Option<[u8; 32]>,
+    /// The transaction as serialized in the block, so the proxy can answer a
+    /// wallet's request for it without asking the server.
+    pub raw: Vec<u8>,
 }
 
 impl ShieldedTx {
@@ -135,7 +138,7 @@ pub fn verify_block(raw: &[u8], expected_hash: &[u8; 32], height: u32) -> Result
         }
         let txid: [u8; 32] = *tx.txid().as_ref();
         txids.push(txid);
-        txs.push(extract(index, txid, &tx));
+        txs.push(ShieldedTx { raw: raw[start..cur.position() as usize].to_vec(), ..extract(index, txid, &tx) });
     }
     if cur.position() as usize != raw.len() {
         bail!("trailing bytes after the last transaction");
@@ -370,11 +373,11 @@ mod tests {
     /// commitments, keys, ciphertexts) but not to its signatures and proofs,
     /// which the header commits to through the chain history root. So a flipped
     /// bit may pass only if every field the comparison uses is unchanged.
-    /// The fields a txid commits to. Anchors are left out: from v6 on they are
-    /// authorizing data, so two peers must agree on them instead.
+    /// The fields a txid commits to. Anchors and the raw bytes are left out:
+    /// from v6 on anchors are authorizing data, so two peers must agree on them.
     fn effects(txs: &[ShieldedTx]) -> Vec<ShieldedTx> {
         txs.iter()
-            .map(|t| ShieldedTx { sapling_anchors: vec![], orchard_anchor: None, ironwood_anchor: None, ..t.clone() })
+            .map(|t| ShieldedTx { sapling_anchors: vec![], orchard_anchor: None, ironwood_anchor: None, raw: vec![], ..t.clone() })
             .collect()
     }
 

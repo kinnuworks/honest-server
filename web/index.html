@@ -136,7 +136,7 @@ honest-server check zec.rocks:443 --test-drop-note</code></pre>
 
   <section class="section page" id="protect">
     <h2>Protect your wallet</h2>
-    <p>Run a light-wallet server on your own machine and point your wallet at it. It forwards every call to the real server over Tor when Tor is running, so the server sees a Tor exit instead of your IP. Before it serves your wallet, it runs the full check once, the 2,000 earlier blocks included, and won't start if the server fails. Then it checks every block from the last 100 against verified blocks from Zcash peers as your wallet syncs, and refuses any block that doesn't match.</p>
+    <p>Run a light-wallet server on your own machine and point your wallet at it. It forwards every call to the real server over Tor when Tor is running, so the server sees a Tor exit instead of your IP. Before it serves your wallet, it runs the full check once, the 2,000 earlier blocks included, and won't start if the server fails. Then it checks every block from the last 100 against verified blocks from Zcash peers as your wallet syncs, and refuses any block that doesn't match. When your wallet asks for one of its own transactions to read the memo, the proxy answers from those peer blocks, so the server never learns which recent transactions are yours.</p>
     <pre class="cmd"><code>honest-server proxy zec.rocks:443
 # then set your wallet's server to http://127.0.0.1:9067</code></pre>
     <p>Tested with ECC's command-line wallet, zcash-devtool, a stock build that takes a local server as it is. A fresh mainnet wallet synced through the proxy over Tor; with one note removed in test mode, its sync stopped with:</p>
@@ -148,7 +148,7 @@ from the server: transaction a12a184366b6b6a1...: Ironwood actions: block has 2,
 
   <section class="section page" id="privacy">
     <h2>Why this is about privacy</h2>
-    <p>A light wallet lets you skip running a full node, and pays for it with trust. The server sees your IP and every request your wallet makes, and it decides which notes your wallet gets to see. Honest Server takes the second part away. The check and the proxy reach the server through Tor, so it sees an exit and not you, and three exits have to get the same answer, so a server can't quietly show one user a different chain. Nothing goes to us, and it needs no keys.</p>
+    <p>A light wallet lets you skip running a full node, and pays for it with trust. The server sees your IP and every request your wallet makes, and it decides which notes your wallet gets to see. Honest Server takes the second part away. The check and the proxy reach the server through Tor, so it sees an exit and not you, and three exits have to get the same answer, so a server can't quietly show one user a different chain. Behind the proxy, your wallet's requests for its own recent transactions are answered from peer blocks, so the server can't tell which payments are yours. Nothing goes to us, and it needs no keys.</p>
   </section>
 
   <section class="section page" id="how">

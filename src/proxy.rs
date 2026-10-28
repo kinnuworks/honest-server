@@ -116,8 +116,20 @@ impl CompactTxStreamer for Proxy {
     async fn get_block_nullifiers(&self, r: Request<rpc::BlockId>) -> Result<Response<CompactBlock>, Status> {
         self.up().get_block_nullifiers(r.into_inner()).await
     }
+    // A wallet fetches its own transactions to read their memos, and that
+    // tells the server which transactions are the wallet's. When the
+    // transaction is in a block already verified from peers, answer from that
+    // block, so the server never sees the request.
     async fn get_transaction(&self, r: Request<rpc::TxFilter>) -> Result<Response<rpc::RawTransaction>, Status> {
-        self.up().get_transaction(r.into_inner()).await
+        let f = r.into_inner();
+        if let Ok(txid) = <[u8; 32]>::try_from(f.hash.as_slice()) {
+            let found = self.reference.lock().await.find_tx(&txid);
+            if let Some((height, data)) = found {
+                eprintln!("GetTransaction {}... answered from verified peer block {height}; the server didn't see it", crate::compare::display_hex(&txid).get(..16).unwrap_or(""));
+                return Ok(Response::new(rpc::RawTransaction { data, height: height as u64 }));
+            }
+        }
+        self.up().get_transaction(f).await
     }
     async fn send_transaction(&self, r: Request<rpc::RawTransaction>) -> Result<Response<rpc::SendResponse>, Status> {
         self.up().send_transaction(r.into_inner()).await
@@ -263,6 +275,45 @@ impl CompactTxStreamer for Proxy {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+
+    fn proxy_with(blocks: Vec<crate::verify::VerifiedBlock>) -> Proxy {
+        // An upstream that can't be reached, so anything forwarded fails.
+        let channel = tonic::transport::Endpoint::from_static("http://127.0.0.1:9").connect_lazy();
+        Proxy {
+            upstream: crate::lwd::rpc::compact_tx_streamer_client::CompactTxStreamerClient::new(channel),
+            reference: Arc::new(Mutex::new(Reference::with_blocks(blocks))),
+            window: 100,
+            strict: false,
+            test_drop_note: false,
+            sample: 0,
+            secret: [0; 32],
+        }
+    }
+
+    #[tokio::test]
+    async fn transactions_in_verified_blocks_never_reach_the_server() {
+        let full = crate::compare::tests::full();
+        let tx = full.txs.iter().find(|t| t.is_shielded()).unwrap().clone();
+        let height = full.height;
+        let p = proxy_with(vec![full]);
+        for hash in [tx.txid.to_vec(), tx.txid.iter().rev().copied().collect()] {
+            let got = p.get_transaction(Request::new(rpc::TxFilter { block: None, index: 0, hash })).await.unwrap().into_inner();
+            assert_eq!(got.data, tx.raw);
+            assert_eq!(got.height, height as u64);
+        }
+        // Bytes that parse back to the same transaction ID.
+        let parsed = zcash_primitives::transaction::Transaction::read(
+            &tx.raw[..],
+            zcash_protocol::consensus::BranchId::for_height(&zcash_protocol::consensus::MainNetwork, height.into()),
+        )
+        .unwrap();
+        assert_eq!(parsed.txid().as_ref(), &tx.txid);
+        // Anything else goes to the server, which here can't be reached.
+        let other = p.get_transaction(Request::new(rpc::TxFilter { block: None, index: 0, hash: vec![7; 32] })).await;
+        assert!(other.is_err());
+    }
+
     #[test]
     fn sampling_is_about_one_in_rate_and_depends_on_the_secret() {
         let (a, b) = ([1u8; 32], [2u8; 32]);

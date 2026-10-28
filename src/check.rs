@@ -114,6 +114,22 @@ impl Reference {
         }
     }
 
+    /// A transaction from a verified block, by txid in either byte order, with
+    /// the block's height.
+    pub fn find_tx(&self, txid: &[u8; 32]) -> Option<(u32, Vec<u8>)> {
+        let mut rev = *txid;
+        rev.reverse();
+        self.cache.values().flatten().find_map(|(b, _)| {
+            b.txs.iter().find(|t| t.txid == *txid || t.txid == rev).map(|t| (b.height, t.raw.clone()))
+        })
+    }
+
+    #[cfg(test)]
+    pub fn with_blocks(blocks: Vec<VerifiedBlock>) -> Reference {
+        let cache = blocks.into_iter().map(|b| (b.header.hash, Some((b, 2)))).collect();
+        Reference { peers: vec![], cache, network_tip: None }
+    }
+
     /// The verified full block with this hash, if the reference has one.
     pub fn verified(&self, hash: &[u8; 32]) -> Option<&VerifiedBlock> {
         self.cache.get(hash).and_then(|c| c.as_ref()).map(|(b, _)| b)
