@@ -8,7 +8,7 @@ A shielded wallet can't see the chain itself. It only decrypts what its server s
 
 ![A real check of zec.rocks, then the same data with one note removed](docs/demo.gif)
 
-**Live table:** link pending (see the deploy note below)
+**Live table:** https://honest-server.vercel.app
 
 **Try it in 30 seconds** (needs Rust; nothing else):
 

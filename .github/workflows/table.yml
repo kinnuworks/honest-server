@@ -1,10 +1,11 @@
 name: table
 
 # Checks every server in servers.txt over Tor and publishes web/ with the
-# fresh results.json.
+# fresh results.json: to Vercel when a VERCEL_TOKEN secret is set, and to
+# GitHub Pages once the repository is public.
 on:
   schedule:
-    - cron: "*/30 * * * *"
+    - cron: "17 * * * *"
   workflow_dispatch:
 
 permissions:
@@ -15,6 +16,10 @@ permissions:
 concurrency:
   group: table
   cancel-in-progress: false
+
+env:
+  VERCEL_ORG_ID: team_ejLhRQeXv0garFSL3yO0tjZJ
+  VERCEL_PROJECT_ID: prj_3p18Fg6GOcGi7AT4etZxHQPOzY1K
 
 jobs:
   check:
@@ -34,11 +39,19 @@ jobs:
           done
       - run: cargo build --release
       - run: ./target/release/honest-server table --servers servers.txt --out web/results.json --tor 127.0.0.1:9050
+      - name: Deploy to Vercel
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        if: env.VERCEL_TOKEN != ''
+        working-directory: web
+        run: npx --yes vercel@57 deploy --prod --yes --token "$VERCEL_TOKEN"
       - uses: actions/upload-pages-artifact@v3
+        if: ${{ !github.event.repository.private }}
         with:
           path: web
-  deploy:
+  pages:
     needs: check
+    if: ${{ !github.event.repository.private }}
     runs-on: ubuntu-latest
     environment:
       name: github-pages
