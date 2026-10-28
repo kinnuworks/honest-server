@@ -1,0 +1,264 @@
+/*
+  base.css: the layer every theme sits on.
+  Load order: base.css, then the theme's tokens file, then components.css.
+  A theme file only sets the custom properties declared here. Nothing below
+  hard-codes a colour, font or radius.
+*/
+
+/* ------------------------------------------------------------------ */
+/* 1. Tokens with neutral defaults. Themes override every one of them. */
+/* ------------------------------------------------------------------ */
+:root {
+  /* Colour. Text tokens must pass 4.5:1 on --paper and --sheet. */
+  --paper: #fafaf8;          /* page background */
+  --sheet: #ffffff;          /* cards, windows, inputs */
+  --sheet-2: #f1f1ed;        /* inset areas, table header, alt bands */
+  --ink: #151515;            /* headings, strongest text, ink borders */
+  --ink-2: #353535;          /* body text */
+  --ink-3: #5e5e5e;          /* secondary text, captions, units */
+  --rule: #dcdcd6;           /* decorative dividers only */
+  --rule-strong: #8a8a84;    /* edges that must be seen (inputs, frames): 3:1 */
+  --act: #2747d8;            /* the one accent: means "act" or "this one" */
+  --on-act: #ffffff;         /* text on --act */
+  --act-ink: var(--act);     /* accent used as text or a link: 4.5:1 */
+  --mark: #ffe58a;           /* highlighter tint: selected text, "you" row */
+  --on-mark: var(--ink);
+  --ok: #17733a;   --ok-bg: #e3f4e8;
+  --bad: #b42318;  --bad-bg: #fde8e6;
+  --warn: #8a5a00; --warn-bg: #fff1cc;
+  --focus: var(--act);       /* focus ring, 3:1 against what it sits on */
+  --overlay: rgb(10 10 10 / 0.5);
+  --banner-bg: var(--mark);   /* demo banner: visible, quieter than the hero */
+  --banner-fg: var(--on-mark);
+
+  /* Primary button. Defaults to the accent; some themes use ink. */
+  --btn-bg: var(--act);
+  --btn-fg: var(--on-act);
+  --btn-border: var(--btn-bg);
+  --ghost-bg: transparent;
+  --ghost-fg: var(--ink);
+  --ghost-border: var(--rule-strong);
+  --link-line: currentColor;   /* underline colour for links */
+
+  /* Type. Two families plus a mono at most (see SKILL.md). */
+  --font-display: ui-sans-serif, system-ui, sans-serif;  /* h1 */
+  --font-heading: var(--font-display);                  /* h2, h3 */
+  --font-ui: ui-sans-serif, system-ui, sans-serif;     /* controls, nav, tables */
+  --font-body: var(--font-ui);                          /* paragraphs */
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --font-accent: var(--font-display);                   /* italic turn, handwriting */
+  --accent-style: italic;
+  --label-font: var(--font-mono);
+  --label-case: uppercase;
+  --label-track: 0.06em;
+  --label-weight: 500;
+
+  /* Type scale. Use at most three of these on one screen. */
+  --fs-display: clamp(2.5rem, 1.6rem + 3.6vw, 4rem);   /* h1 */
+  --fs-h2: clamp(1.75rem, 1.3rem + 1.8vw, 2.5rem);
+  --fs-h3: 1.25rem;
+  --fs-lead: 1.25rem;
+  --fs-body: 1rem;            /* 16px floor for paragraphs */
+  --fs-small: 0.875rem;
+  --fs-label: 0.8125rem;      /* 13px: the smallest text allowed anywhere */
+  --lh-display: 1;
+  --lh-heading: 1.15;
+  --lh-body: 1.55;
+  --track-display: -0.02em;
+  --track-heading: -0.01em;
+  --track-body: 0;
+  --weight-display: 600;
+  --weight-heading: 600;
+  --weight-body: 400;
+  --weight-strong: 600;
+  --display-case: none;
+
+  /* Space. Fixed scale; themes tune the named gaps. */
+  --s-1: 4px;  --s-2: 8px;  --s-3: 12px; --s-4: 16px; --s-5: 24px;
+  --s-6: 32px; --s-7: 48px; --s-8: 64px; --s-9: 96px; --s-10: 128px;
+  --page-max: 1240px;
+  --gutter: clamp(16px, 4vw, 40px);
+  --gap-section: clamp(var(--s-8), 8vw, var(--s-9));
+  --pad-panel: var(--s-5);
+  --h-control: 44px;
+  --pad-control: var(--s-5);
+
+  /* Shape and depth. Pick one depth philosophy per theme. */
+  --border-w: 1px;
+  --rule-style: solid;
+  --field-bw: var(--border-w);           /* "0 0 1px" gives underline fields */
+  --r-control: 6px;
+  --r-card: 8px;
+  --r-window: 10px;
+  --r-pill: 999px;
+  --r-badge: 4px;
+  --btn-radius: var(--r-control);
+  --card-edge: var(--rule);
+  --frame-line: var(--rule-strong);
+  --shadow-card: none;
+  --shadow-window: 0 12px 28px -12px rgb(0 0 0 / 0.16);
+  --shadow-pop: 0 18px 44px -12px rgb(0 0 0 / 0.28);
+  --shadow-btn: none;
+  --shadow-ghost: none;
+  --press-y: 1px;                        /* how far a button moves when pressed */
+
+  /* Theme knobs read by components.css */
+  --tick: 0px;                           /* corner tick length on frames, 0 hides */
+  --tick-color: var(--ink);
+  --tilt: 0deg;                          /* rotation for decorative cards only */
+  --dots: 0;                             /* 1 shows three dots in window bars */
+  --dot-1: var(--rule-strong); --dot-2: var(--rule-strong); --dot-3: var(--rule-strong);
+  --dot-radius: 50%;
+  --chrome-bg: var(--sheet-2);
+  --chrome-fg: var(--ink-3);
+  --chrome-align: center;
+  --chrome-font: var(--label-font);
+  --device-bezel: var(--ink);
+  /* Art palette: only inside illustrations, tiles, characters and charts.
+     Never on a button, link or label (one accent per page). */
+  --art-1: var(--act); --art-2: var(--sheet-2); --art-3: var(--rule); --art-4: var(--paper);
+  --pill-dot-radius: 50%;
+  --icon-stroke: 1.75;
+  --prompt-prefix: none;                 /* a sign before the prompt input, e.g. "$" */
+
+  /* Background */
+  --bg-pattern: none;
+  --bg-size: auto;
+  --texture: none;                       /* static texture for one panel; off in record mode */
+
+  /* Motion. Durations scale up in record mode. */
+  --motion-scale: 1;
+  --dur-1: calc(120ms * var(--motion-scale));
+  --dur-2: calc(240ms * var(--motion-scale));
+  --dur-3: calc(480ms * var(--motion-scale));
+  --dur-signature: calc(700ms * var(--motion-scale));
+  --ease-move: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --ease-pop: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --stagger: 60ms;
+
+  color-scheme: light;
+}
+
+/* ------------------------------------------------------------------ */
+/* 2. Reset                                                            */
+/* ------------------------------------------------------------------ */
+*, *::before, *::after { box-sizing: border-box; }
+* { margin: 0; }
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  hanging-punctuation: first last;
+}
+body {
+  min-height: 100dvh;
+  background-color: var(--paper);
+  background-image: var(--bg-pattern);
+  background-size: var(--bg-size);
+  color: var(--ink-2);
+  font-family: var(--font-body);
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+  letter-spacing: var(--track-body);
+  font-weight: var(--weight-body);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+/* Decorative shapes that bleed past the edge go inside .bleed, so the
+   page itself never scrolls sideways. Don't clip body: it hides real bugs. */
+.bleed { overflow: clip; }
+img, picture, video, canvas, svg { display: block; max-width: 100%; }
+img, video { height: auto; }
+input, button, textarea, select { font: inherit; color: inherit; letter-spacing: inherit; }
+button { cursor: pointer; background: none; border: 0; padding: 0; }
+button:disabled { cursor: not-allowed; }
+a { color: var(--act-ink); text-underline-offset: 0.18em; text-decoration-thickness: 1px; text-decoration-color: var(--link-line); }
+a:hover { text-decoration-thickness: 2px; }
+p, li, figcaption { text-wrap: pretty; max-width: 68ch; }
+h1, h2, h3, h4 {
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-weight: var(--weight-heading);
+  line-height: var(--lh-heading);
+  letter-spacing: var(--track-heading);
+  text-wrap: balance;
+  overflow-wrap: break-word;
+}
+h1 {
+  font-size: var(--fs-display);
+  font-weight: var(--weight-display);
+  line-height: var(--lh-display);
+  letter-spacing: var(--track-display);
+  text-transform: var(--display-case);
+}
+h2, h3 { font-family: var(--font-heading); }
+h2 { font-size: var(--fs-h2); }
+h3 { font-size: var(--fs-h3); }
+strong, b { font-weight: var(--weight-strong); color: var(--ink); }
+code, kbd, samp, pre { font-family: var(--font-mono); font-size: max(0.95em, var(--fs-label)); }
+table { border-collapse: collapse; }
+::selection { background: var(--mark); color: var(--on-mark); }
+svg.lucide, .icon { stroke-width: var(--icon-stroke); flex-shrink: 0; }
+
+/* ------------------------------------------------------------------ */
+/* 3. Focus: always visible for keyboard users                        */
+/* ------------------------------------------------------------------ */
+:focus { outline: none; }
+:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+  border-radius: max(2px, min(var(--r-control), 8px));
+}
+.skip-link {
+  position: absolute; left: var(--s-4); top: -100px; z-index: 100;
+  background: var(--ink); color: var(--paper);
+  padding: var(--s-2) var(--s-4); border-radius: var(--r-control);
+}
+.skip-link:focus { top: var(--s-4); }
+
+/* ------------------------------------------------------------------ */
+/* 4. Reduced motion, record mode, no-WebGL and lite fallbacks        */
+/* ------------------------------------------------------------------ */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+/* runtime.js sets data-motion="reduce" for the OS setting and for ?motion=reduce */
+[data-motion="reduce"] *, [data-motion="reduce"] *::before, [data-motion="reduce"] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
+/* ?record=1: slower key transitions, no grain, no texture */
+[data-record] { --motion-scale: 1.5; --texture: none; }
+/* Recording at 1920 x 1080: larger text and a wider page so the product fills
+   the frame. (CSS zoom would break the viewport units, so type scales instead.) */
+@media (min-width: 1680px) {
+  :root[data-record] { font-size: 112.5%; --page-max: 1480px; }
+}
+[data-record] .grain, [data-record] [data-grain] { display: none !important; }
+/* Heavy effects hide when WebGL is missing or the device is slow; the
+   .fx-fallback element underneath shows instead. */
+[data-webgl="no"] .fx-webgl, [data-lite] .fx-heavy { display: none !important; }
+.fx-fallback { display: none; }
+[data-webgl="no"] .fx-fallback, [data-lite] .fx-fallback { display: block; }
+
+/* ------------------------------------------------------------------ */
+/* 5. Layout helpers                                                   */
+/* ------------------------------------------------------------------ */
+.page { width: min(100% - 2 * var(--gutter), var(--page-max)); margin-inline: auto; }
+.section { padding-block: var(--gap-section); }
+.stack { display: flex; flex-direction: column; gap: var(--stack-gap, var(--s-4)); }
+.cluster { display: flex; flex-wrap: wrap; align-items: center; gap: var(--cluster-gap, var(--s-3)); }
+.grid { display: grid; gap: var(--grid-gap, var(--s-5)); grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--grid-min, 260px)), 1fr)); }
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+.num { font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1; }
+.mono { font-family: var(--font-mono); }
+.muted { color: var(--ink-3); }

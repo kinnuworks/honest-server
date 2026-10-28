@@ -1,0 +1,67 @@
+/* Plain Ledger: token values only. Load after core/base.css.
+   Fonts, in <head> (or drop the link and let ui-monospace take over: zero font weight):
+   <link rel="preconnect" href="https://fonts.googleapis.com">
+   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&display=swap">
+*/
+:root {
+  --paper: #FAFAFA;
+  --sheet: #FFFFFF;
+  --sheet-2: #F2F2F2;
+  --ink: #111111;
+  --ink-2: #333333;
+  --ink-3: #666666;
+  --rule: #BDBDBD;
+  --rule-strong: #414141;  /* table grid, inputs, frames */
+  --act: #F35815;          /* orange: actions only */
+  --on-act: #111111;
+  --act-ink: #111111;      /* links stay ink with an orange underline */
+  --mark: #FBCA00;         /* yellow bar: news line, the "you" row */
+  --on-mark: #111111;
+  --ok: #0F7428;  --ok-bg: #E6F4EA;
+  --bad: #C01A30; --bad-bg: #FCE8EB;
+  --warn: #8A5A00; --warn-bg: #FFF4CC;
+  --focus: #111111;
+  --overlay: rgb(17 17 17 / 0.45);
+  --btn-bg: #F35815; --btn-fg: #111111; --btn-border: #F35815;
+  --ghost-fg: #111111; --ghost-border: #F35815;
+  --link-line: #F35815;
+  --banner-bg: #FBCA00; --banner-fg: #111111;
+  --nav-line: #414141;
+
+  --font-display: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --font-heading: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --font-ui: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --font-body: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --font-accent: "IBM Plex Mono", ui-monospace, monospace;
+  --accent-style: normal; --turn-weight: 700;
+  --label-font: "IBM Plex Mono", ui-monospace, monospace;
+  --label-case: uppercase; --label-track: 0.04em; --label-weight: 600;
+  /* Hierarchy comes from weight, colour and position. Sizes barely move. */
+  --fs-display: 1.75rem; --fs-h2: 1.25rem; --fs-h3: 1rem; --fs-lead: 1.125rem;
+  --fs-body: 1rem; --fs-small: 0.875rem; --fs-label: 0.8125rem;
+  --lh-display: 1.25; --lh-heading: 1.35; --lh-body: 1.5;
+  --track-display: -0.01em; --track-heading: 0;
+  --weight-display: 700; --weight-heading: 700; --weight-strong: 700;
+  --btn-weight: 600; --btn-fs: 1rem;
+  --stat-font: "IBM Plex Mono", ui-monospace, monospace; --stat-fs: 2rem;
+
+  --page-max: 1080px; --gap-section: 96px; --pad-panel: 24px; --h-control: 40px; --pad-control: 16px;
+  --border-w: 1px;
+  --r-control: 0px; --r-card: 0px; --r-window: 0px; --r-pill: 0px; --r-badge: 0px;
+  --card-edge: #414141; --frame-line: #414141;
+  --shadow-card: none; --shadow-window: none; --shadow-pop: none; --shadow-btn: none;
+  --shadow-ghost: inset 0 0 0 1px #F35815;   /* 2px orange outline */
+  --press-y: 0px;
+  --tick: 0px;
+  --dots: 0; --chrome-bg: #F2F2F2; --chrome-fg: #333333; --chrome-align: left;
+  --device-bezel: #111111;
+  --art-1: #F35815; --art-2: #414141; --art-3: #BDBDBD; --art-4: #FBCA00;
+  --pill-dot-radius: 0;
+  --icon-stroke: 1.25;
+
+  --bg-pattern: none;
+
+  --dur-signature: calc(200ms * var(--motion-scale));
+}
