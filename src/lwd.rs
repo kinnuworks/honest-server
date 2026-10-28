@@ -29,7 +29,15 @@ pub async fn connect(server: &str, route: &Route) -> Result<Client> {
         Some((s, rest)) => (s.to_string(), rest.to_string()),
         None => ("https".to_string(), server.to_string()),
     };
-    let host = hostport.rsplit_once(':').map(|(h, _)| h).unwrap_or(&hostport).to_string();
+    let host = match hostport.rsplit_once(':') {
+        Some((h, port)) => {
+            if port.parse::<u16>().is_err() {
+                anyhow::bail!("\"{port}\" isn't a port number");
+            }
+            h.to_string()
+        }
+        None => hostport.clone(),
+    };
     let uri = format!("{scheme}://{hostport}");
     let mut ep = Endpoint::from_shared(uri.clone())?
         .connect_timeout(Duration::from_secs(20))
@@ -75,6 +83,46 @@ fn rand_u64() -> u64 {
         .map(|d| d.as_nanos())
         .unwrap_or(0);
     u64::from_le_bytes(crate::p2p::dsha256(&t.to_le_bytes())[..8].try_into().unwrap())
+}
+
+/// Turns a connection or call error into one plain sentence.
+pub fn plain_error(server: &str, e: &anyhow::Error) -> String {
+    let text = format!("{e:#}").to_lowercase();
+    let why = if text.contains("isn't a port number") {
+        "the part after the colon isn't a port number"
+    } else if text.contains("503") || text.contains("service unavailable") {
+        "it's temporarily unavailable (HTTP 503)"
+    } else if text.contains("dns") || text.contains("resolve") || text.contains("lookup") || text.contains("name or service") {
+        "the name doesn't resolve"
+    } else if text.contains("refused") {
+        "the connection was refused (nothing listening on that port)"
+    } else if text.contains("deadline") || text.contains("timed out") || text.contains("timeout") {
+        "it didn't answer in time"
+    } else if text.contains("tls") || text.contains("certificate") || text.contains("handshake") {
+        "the TLS handshake failed"
+    } else if text.contains("compression flag") || text.contains("405") || text.contains("404") || text.contains("unimplemented") || text.contains("content-type") {
+        "it answered, but it isn't a Zcash light-wallet server"
+    } else if text.contains("h2 protocol") || text.contains("http2") || text.contains("frame") {
+        "it doesn't speak gRPC over HTTP/2 the way a light-wallet server should"
+    } else if text.contains("reset") || text.contains("closed") || text.contains("broken pipe") {
+        "it closed the connection"
+    } else {
+        "it couldn't be reached"
+    };
+    format!("Couldn't check {server}: {why}.")
+}
+
+/// Checks that `server` is a reachable light-wallet server, within 20 seconds.
+pub async fn reach(server: &str, route: &Route) -> Result<(), String> {
+    let attempt = async {
+        let mut c = connect(server, route).await?;
+        info(&mut c).await
+    };
+    match tokio::time::timeout(Duration::from_secs(20), attempt).await {
+        Ok(Ok(_)) => Ok(()),
+        Ok(Err(e)) => Err(plain_error(server, &e)),
+        Err(_) => Err(format!("Couldn't check {server}: it didn't answer in time.")),
+    }
 }
 
 pub async fn info(c: &mut Client) -> Result<LightdInfo> {

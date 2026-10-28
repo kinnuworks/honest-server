@@ -30,6 +30,22 @@ pub struct Proxy {
     pub strict: bool,
     /// Test mode: drop one shielded note from each batch before checking it.
     pub test_drop_note: bool,
+    /// Older blocks are checked at random, about one in this many.
+    pub sample: u64,
+    /// Secret that decides which older blocks get checked, so the server can't predict it.
+    pub secret: [u8; 32],
+}
+
+/// True if this older block is one of the randomly chosen ones.
+fn sampled(secret: &[u8; 32], height: u64, rate: u64) -> bool {
+    if rate == 0 {
+        return false;
+    }
+    let mut buf = [0u8; 40];
+    buf[..32].copy_from_slice(secret);
+    buf[32..].copy_from_slice(&height.to_le_bytes());
+    let h = crate::p2p::dsha256(&buf);
+    u64::from_le_bytes(h[..8].try_into().unwrap()) % rate == 0
 }
 
 impl Proxy {
@@ -183,17 +199,31 @@ impl CompactTxStreamer for Proxy {
         let mut upstream = self.up().get_block_range(r.into_inner()).await?.into_inner();
         let (tx, rx) = mpsc::channel(64);
         let reference = self.reference.clone();
-        let (strict, test, window) = (self.strict, self.test_drop_note, self.window);
+        let (strict, test, window, rate, secret) = (self.strict, self.test_drop_note, self.window, self.sample, self.secret);
         tokio::spawn(async move {
             let mut batch: Vec<CompactBlock> = Vec::new();
             let mut passed = 0u64;
+            let mut spot_checked = 0u64;
             loop {
                 let next = upstream.next().await;
                 let done = !matches!(next, Some(Ok(_)));
                 match next {
                     Some(Ok(b)) if b.height >= from => batch.push(b),
                     Some(Ok(b)) => {
-                        passed += 1;
+                        // Older block: check a random sample, pass the rest on.
+                        let b = if sampled(&secret, b.height, rate) {
+                            spot_checked += 1;
+                            match check_batch(&reference, vec![b], strict, false).await {
+                                Ok(mut ok) => ok.remove(0),
+                                Err(e) => {
+                                    let _ = tx.send(Err(e)).await;
+                                    return;
+                                }
+                            }
+                        } else {
+                            passed += 1;
+                            b
+                        };
                         if tx.send(Ok(b)).await.is_err() {
                             return;
                         }
@@ -223,10 +253,23 @@ impl CompactTxStreamer for Proxy {
                     break;
                 }
             }
-            if passed > 0 {
-                eprintln!("passed on {passed} older blocks without checking (outside the last {window})");
+            if passed + spot_checked > 0 {
+                eprintln!("older blocks (outside the last {window}): {spot_checked} checked at random, {passed} passed on");
             }
         });
         Ok(Response::new(Box::pin(ReceiverStream::new(rx))))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn sampling_is_about_one_in_rate_and_depends_on_the_secret() {
+        let (a, b) = ([1u8; 32], [2u8; 32]);
+        let picked: Vec<u64> = (0..50_000).filter(|h| super::sampled(&a, *h, 50)).collect();
+        assert!((800..1200).contains(&picked.len()), "{}", picked.len());
+        let other: Vec<u64> = (0..50_000).filter(|h| super::sampled(&b, *h, 50)).collect();
+        assert_ne!(picked, other, "a different secret picks different blocks");
+        assert!(!(0..1000).any(|h| super::sampled(&a, h, 0)));
     }
 }

@@ -15,7 +15,10 @@ use tokio::time::timeout;
 const MAGIC: [u8; 4] = [0x24, 0xe9, 0x27, 0x64];
 /// NU7 peers on mainnet require protocol version 170190 (ZIP 259).
 const PROTOCOL_VERSION: i32 = 170_190;
-const USER_AGENT: &[u8] = b"/honest-server:0.1.0/";
+/// The user agent of the most common NU7-ready node, so peers can't pick
+/// this tool out from ordinary nodes.
+const USER_AGENT: &[u8] = b"/Zebra:7.0.0/";
+
 const MAX_PAYLOAD: usize = 4 * 1024 * 1024;
 const MSG_BLOCK: u32 = 2;
 
@@ -437,6 +440,6 @@ mod tests {
         assert_eq!(i32::from_le_bytes(p[..4].try_into().unwrap()), 170_190);
         let mut pos = 80;
         let len = read_compact_size(&p, &mut pos).unwrap() as usize;
-        assert_eq!(&p[pos..pos + len], USER_AGENT);
+        assert_eq!(&p[pos..pos + len], b"/Zebra:7.0.0/");
     }
 }

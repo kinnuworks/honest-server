@@ -9,9 +9,8 @@
 <meta property="og:description" content="Catch light servers that lie. Zcash light-wallet servers checked against full blocks from Zcash peers.">
 <meta property="og:image" content="https://honest-server.vercel.app/social.png">
 <meta name="twitter:card" content="summary_large_image">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&display=swap">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="design/fonts.css">
 <link rel="stylesheet" href="design/base.css">
 <link rel="stylesheet" href="design/theme.css">
 <link rel="stylesheet" href="design/components.css">
@@ -27,7 +26,19 @@
   .units i[data-reveal="in"] { border-style: solid; border-color: var(--ink); background: var(--ink); }
   .units i.bad[data-reveal="in"] { background: var(--bad); border-color: var(--bad); }
   .units-legend { display: flex; flex-wrap: wrap; gap: var(--s-4); font-family: var(--font-ui); font-size: var(--fs-label); color: var(--ink-3); margin-bottom: var(--s-4); }
-  .servers td .note { display: block; color: var(--ink-3); font-size: var(--fs-small); margin-top: 4px; white-space: normal; max-width: 44ch; }
+  .servers td .note { display: block; color: var(--ink-3); font-size: var(--fs-small); margin-top: 4px; white-space: normal; max-width: 52ch; }
+  .servers td .note.warn { color: var(--bad); }
+  .servers td:not(:first-child) { white-space: nowrap; }
+  .unreach { font-size: var(--fs-small); margin: var(--s-3) var(--s-4); }
+  #latest .ui-window__body { padding: 0; max-height: 640px; overflow-y: auto; }
+  #lie .ui-window { max-width: 900px; }
+  @media (max-width: 640px) {
+    .servers thead { display: none; }
+    .servers tr { display: grid; grid-template-columns: repeat(3, auto) 1fr; gap: 8px; padding: 12px 16px; border-bottom: 1px solid var(--rule); }
+    .servers td { display: block; padding: 0; border: 0; }
+    .servers td:first-child { grid-column: 1 / -1; }
+    .servers td[data-label]::before { content: attr(data-label); display: block; font-size: var(--fs-label); color: var(--ink-3); margin-bottom: 2px; }
+  }
   .servers code { color: var(--ink); }
   .section-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--s-3); }
   .cmd { background: var(--sheet); border: var(--border-w) solid var(--rule-strong); padding: var(--s-4); overflow-x: auto; margin: 0; }
@@ -47,7 +58,7 @@
 <nav class="ui-nav">
   <div class="ui-nav__inner page">
     <a class="ui-nav__brand" href="#top">Honest Server</a>
-    <span class="ui-nav__links"><a href="#servers">Public servers</a> | <a href="#own">Check your own server</a> | <a href="#protect">Protect your wallet</a> | <a href="#how">How it works</a> | <a href="results.json">results.json</a></span>
+    <span class="ui-nav__links"><a href="#latest">Public servers</a> | <a href="#own">Check your own server</a> | <a href="#protect">Protect your wallet</a> | <a href="#how">How it works</a> | <a href="results.json">results.json</a></span>
   </div>
 </nav>
 
@@ -63,28 +74,29 @@
     </div>
 
     <div class="ui-hero__stage">
-      <figure class="ui-window ui-frame" id="test">
-        <span class="ui-frame__caption">[ fig. 1 · what a lying server looks like ]</span>
-        <div class="ui-window__bar"><span class="ui-window__title">test server · one note removed</span><span class="ui-window__end"><span class="ui-pill ui-pill--plain">Simulated</span></span></div>
-        <div class="ui-window__body" id="test-body">
-          <div class="ui-state ui-state--loading"><p class="ui-state__body">Loading the latest check...</p></div>
+      <figure class="ui-window ui-frame" id="latest">
+        <span class="ui-frame__caption">[ fig. 1 · latest check of public servers ]</span>
+        <div class="ui-window__bar"><span class="ui-window__title" id="status">public servers · loading</span><span class="ui-window__end"><span class="ui-pill ui-pill--plain">Real data</span></span></div>
+        <div class="ui-window__body" id="servers-body">
+          <div class="ui-state ui-state--loading" aria-live="polite">
+            <h3 class="ui-state__title">Loading the latest check...</h3>
+            <ol class="ui-steps"><li data-state="now">Reading results.json</li><li>Listing servers, problems first</li></ol>
+          </div>
         </div>
       </figure>
+      <div class="key"><span><span class="ui-pill ui-pill--ok">Pass</span> matched the verified blocks</span><span><span class="ui-pill ui-pill--bad">Fail</span> something differs, with the evidence</span><span><span class="ui-pill">Couldn't verify</span> not a failure</span></div>
     </div>
   </section>
 
-  <section class="section page" id="servers">
-    <div class="section-head">
-      <h2>Public servers</h2>
-      <span class="muted" id="status"></span>
-    </div>
-    <div id="servers-body">
-      <div class="ui-state ui-state--loading" aria-live="polite">
-        <h3 class="ui-state__title">Loading the latest check...</h3>
-        <ol class="ui-steps"><li data-state="now">Reading results.json</li><li>Listing servers, problems first</li></ol>
+  <section class="section page" id="lie">
+    <h2>What a lying server looks like</h2>
+    <figure class="ui-window ui-frame" id="test">
+      <span class="ui-frame__caption">[ fig. 2 · one note removed ]</span>
+      <div class="ui-window__bar"><span class="ui-window__title">test server · one note removed</span><span class="ui-window__end"><span class="ui-pill ui-pill--plain">Simulated</span></span></div>
+      <div class="ui-window__body" id="test-body">
+        <div class="ui-state ui-state--loading"><p class="ui-state__body">Loading the latest check...</p></div>
       </div>
-    </div>
-    <div class="key"><span><span class="ui-pill ui-pill--ok">Pass</span> matched the verified blocks</span><span><span class="ui-pill ui-pill--bad">Fail</span> something differs, with the evidence</span><span><span class="ui-pill">Couldn't verify</span> not a failure: unreachable, or nothing to confirm against</span></div>
+    </figure>
   </section>
 
   <section class="section page" id="proof-section" hidden>
@@ -101,8 +113,8 @@ honest-server check zec.rocks:443 --test-drop-note</code></pre>
 
   <section class="section page" id="protect">
     <h2>Protect your wallet</h2>
-    <p>Run a light-wallet server on your own machine and point your wallet at it. It forwards every call to the real server, over Tor if you ask, so the server sees a Tor exit instead of your IP. Before your wallet gets any recent block, it checks the block against verified blocks from Zcash peers, and refuses one that doesn't match.</p>
-    <pre class="cmd"><code>honest-server proxy zec.rocks:443 --tor 127.0.0.1:9050
+    <p>Run a light-wallet server on your own machine and point your wallet at it. It forwards every call to the real server over Tor when Tor is running, so the server sees a Tor exit instead of your IP. It checks every recent block, and a random sample of older ones, against verified blocks from Zcash peers, and refuses any block that doesn't match.</p>
+    <pre class="cmd"><code>honest-server proxy zec.rocks:443
 # then set your wallet's server to http://127.0.0.1:9067</code></pre>
   </section>
 
@@ -136,19 +148,26 @@ function notes(r) {
   return lines.map(l => `<span class="note">${l}</span>`).join("");
 }
 
+function facts(r) {
+  const t = r.tally, bits = [];
+  if (r.range) bits.push(`${n(r.range[1] - r.range[0] + 1)} blocks, ${n(t.shielded_txs)} shielded txs, ${n(t.commitments)} commitments`);
+  if (r.exits) bits.push(`${r.exits.matched} of ${r.exits.exits} Tor exits matched`);
+  if (r.info.node) bits.push(esc(r.info.node));
+  return bits.length ? `<span class="note">${bits.join(" · ")}</span>` : "";
+}
+
+function problems(r) {
+  const lines = r.notes.filter(x => !/^Tor exit/.test(x)).map(esc);
+  for (const m of r.mismatches.slice(0, 3)) lines.push(`Block ${n(m.height)}, transaction ${esc(m.txid.slice(0, 16))}...: ${esc(m.what)}`);
+  return lines.map(l => `<span class="note warn">${l}</span>`).join("");
+}
+
 function row(r) {
-  const t = r.tally, has = !!r.range;
-  const tip = r.network_tip ? `<span class="note">tip ${n(r.server_tip)}, network ${n(r.network_tip)}</span>` : "";
   return `<tr>
-    <td><code>${esc(r.server)}</code>${notes(r)}</td>
-    <td>${pill(r.complete)}${r.exits ? `<span class="note">${r.exits.matched} of ${r.exits.exits} Tor exits matched</span>` : ""}</td>
-    <td>${pill(r.current)}${tip}</td>
-    <td>${pill(r.nu7)}</td>
-    <td class="num">${has ? `${n(r.range[0])}–${n(r.range[1])}` : ""}</td>
-    <td class="num">${has ? n(t.shielded_txs) : ""}</td>
-    <td class="num">${has ? n(t.commitments) : ""}</td>
-    <td class="num">${has ? n(t.nullifiers) : ""}</td>
-    <td>${esc(r.info.software)}${r.info.node ? `<span class="note">${esc(r.info.node)}</span>` : ""}</td>
+    <td><code>${esc(r.server)}</code>${facts(r)}${problems(r)}</td>
+    <td data-label="Complete">${pill(r.complete)}</td>
+    <td data-label="Current">${pill(r.current)}</td>
+    <td data-label="NU7">${pill(r.nu7)}</td>
   </tr>`;
 }
 
@@ -202,15 +221,18 @@ function renderServers(t) {
   const parts = [`${S.length} servers checked`, `${count("complete", "pass")} sent exactly what the blocks contain`];
   if (count("complete", "fail")) parts.push(`${count("complete", "fail")} sent something different`);
   if (count("current", "fail")) parts.push(`${count("current", "fail")} are behind the network`);
-  if (count("nu7", "fail")) parts.push(`${count("nu7", "fail")} of them runs a node that will stop at NU7, the network upgrade at block 3,543,405`);
+  if (count("nu7", "fail")) parts.push(`${count("nu7", "fail")} of them runs a node that stops before NU7, the network upgrade at block 3,543,405`);
   if (S.length - reached) parts.push(`${S.length - reached} couldn't be reached`);
   $("summary").innerHTML = `<strong>${parts.join(". ")}.</strong> Last checked ${when(t.generated_at)}.`;
-  $("status").textContent = `${S.length} servers, ${t.blocks_per_check} recent blocks each, probed over Tor.`;
-  const rank = r => (r.complete === "fail" || r.current === "fail" || r.nu7 === "fail") ? 0 : (r.range ? 2 : 1);
-  const sorted = [...S].sort((a, b) => rank(a) - rank(b));
-  $("servers-body").innerHTML = `<p class="ui-label">[ fig. 2 · public servers ]</p><div class="ui-table-wrap"><table class="ui-table servers">
-    <thead><tr><th>Server</th><th>Complete</th><th>Current</th><th>NU7</th><th class="num">Blocks</th><th class="num">Shielded txs</th><th class="num">Commitments</th><th class="num">Nullifiers</th><th>Software</th></tr></thead>
-    <tbody>${sorted.map(row).join("")}</tbody></table></div>`;
+  $("status").textContent = `${S.length} servers · ${t.blocks_per_check} recent blocks each · over Tor`;
+  const bad = r => r.complete === "fail" || r.current === "fail" || r.nu7 === "fail";
+  const shown = [...S.filter(r => r.range && bad(r)), ...S.filter(r => r.range && !bad(r))];
+  const unreachable = S.filter(r => !r.range);
+  const why = r => esc((r.notes.find(x => x.startsWith("Couldn't check")) || "couldn't be reached").replace(/^Couldn't check [^:]+: /, "").replace(/\.$/, ""));
+  $("servers-body").innerHTML = `<div class="ui-table-wrap"><table class="ui-table servers">
+    <thead><tr><th>Server</th><th>Complete</th><th>Current</th><th>NU7</th></tr></thead>
+    <tbody>${shown.map(row).join("")}</tbody></table></div>
+    ${unreachable.length ? `<p class="muted unreach">${unreachable.length} more couldn't be reached: ${unreachable.map(r => `<code>${esc(r.server.replace(/^https?:\/\//, ""))}</code> (${why(r)})`).join(", ")}.</p>` : ""}`;
   const ranges = S.filter(r => r.range).map(r => r.range);
   $("proof").innerHTML = `
     <div class="ui-proof__head"><span class="ui-label">Reference blocks</span><span class="ui-pill ui-pill--ok">Verified</span></div>

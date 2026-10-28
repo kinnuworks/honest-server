@@ -137,19 +137,37 @@ impl Reference {
         if todo.is_empty() {
             return;
         }
-        let mut agree: HashMap<[u8; 32], (Option<VerifiedBlock>, usize)> = HashMap::new();
+        // For each block: the verified copy and the distinct peers that served it.
+        let mut agree: HashMap<[u8; 32], (Option<VerifiedBlock>, Vec<std::net::SocketAddr>)> = HashMap::new();
         let mut pool = std::mem::take(&mut self.peers);
-        let mut alive = Vec::new();
+        let mut alive: Vec<Peer> = Vec::new();
+        let mut rounds = 0;
         // Ask three peers at once; if some blocks still lack two verifying
-        // peers, ask the next three for just those.
+        // peers, ask the next three for just those. When the peers run out,
+        // connect new ones, up to two more times.
         loop {
             let missing: Vec<[u8; 32]> = todo
                 .iter()
                 .map(|(_, h)| *h)
-                .filter(|h| agree.get(h).map(|(_, n)| *n < 2).unwrap_or(true))
+                .filter(|h| agree.get(h).map(|(_, p)| p.len() < 2).unwrap_or(true))
                 .collect();
-            if missing.is_empty() || pool.is_empty() {
+            if missing.is_empty() {
                 break;
+            }
+            if pool.is_empty() {
+                if rounds >= 2 {
+                    break;
+                }
+                rounds += 1;
+                let have: Vec<_> = alive.iter().map(|p| p.addr).collect();
+                for p in p2p::connect_peers(6, 170_190).await {
+                    if !have.contains(&p.addr) {
+                        pool.push(p);
+                    }
+                }
+                if pool.is_empty() {
+                    break;
+                }
             }
             let batch: Vec<Peer> = pool.drain(..pool.len().min(3)).collect();
             let mut set = tokio::task::JoinSet::new();
@@ -158,10 +176,14 @@ impl Reference {
                 set.spawn(async move {
                     let mut got = Vec::new();
                     let mut ok = true;
-                    for chunk in missing.chunks(16) {
+                    for chunk in missing.chunks(8) {
                         match tokio::time::timeout(std::time::Duration::from_secs(25), peer.get_blocks(chunk)).await {
                             Ok(Ok(blocks)) => got.extend(blocks),
-                            _ => {
+                            other => {
+                                if std::env::var_os("HONEST_DEBUG").is_some() {
+                                    let why = match other { Err(_) => "timed out".to_string(), Ok(Err(e)) => format!("{e:#}"), _ => String::new() };
+                                    eprintln!("peer {}: chunk failed: {why}", peer.addr);
+                                }
                                 ok = false;
                                 break;
                             }
@@ -172,6 +194,10 @@ impl Reference {
             }
             while let Some(res) = set.join_next().await {
                 let Ok((peer, ok, got)) = res else { continue };
+                let from = peer.addr;
+                if std::env::var_os("HONEST_DEBUG").is_some() {
+                    eprintln!("peer {from}: {} blocks, {}", got.len(), if ok { "ok" } else { "timed out or failed" });
+                }
                 if ok {
                     alive.push(peer);
                 }
@@ -179,16 +205,26 @@ impl Reference {
                     // Match the block to the hash we asked for by its header.
                     let Ok(hd) = zcash_primitives::block::BlockHeader::read(&raw[..]) else { continue };
                     let Some((height, hash)) = todo.iter().find(|(_, h)| hd.hash().0 == *h) else { continue };
-                    if let Ok(vb) = verify::verify_block(&raw, hash, *height as u32) {
-                        let e = agree.entry(*hash).or_insert((None, 0));
-                        e.1 += 1;
-                        if e.0.is_none() {
-                            e.0 = Some(vb);
+                    let e = agree.entry(*hash).or_insert((None, Vec::new()));
+                    if e.1.contains(&from) {
+                        continue;
+                    }
+                    match verify::verify_block(&raw, hash, *height as u32) {
+                        Ok(vb) => {
+                            e.1.push(from);
+                            if e.0.is_none() {
+                                e.0 = Some(vb);
+                            }
+                        }
+                        Err(err) => {
+                            if std::env::var_os("HONEST_DEBUG").is_some() {
+                                eprintln!("block {height} from {from} rejected: {err:#}");
+                            }
                         }
                     }
                 }
                 // Don't wait for a slow peer once every block has two.
-                if todo.iter().all(|(_, h)| agree.get(h).map(|(_, n)| *n >= 2).unwrap_or(false)) {
+                if todo.iter().all(|(_, h)| agree.get(h).map(|(_, p)| p.len() >= 2).unwrap_or(false)) {
                     set.abort_all();
                     break;
                 }
@@ -198,7 +234,7 @@ impl Reference {
         self.peers = alive;
         for (_, h) in &todo {
             let entry = match agree.remove(h) {
-                Some((Some(vb), n)) if n >= 2 => Some((vb, n)),
+                Some((Some(vb), p)) if p.len() >= 2 => Some((vb, p.len())),
                 _ => None,
             };
             self.cache.insert(*h, entry);
@@ -308,7 +344,7 @@ pub async fn check(server: &str, route: &Route, window: u64, reference: &mut Ref
     let blocks = match fetch_server(server, route, window, &mut r).await {
         Ok(b) => b,
         Err(e) => {
-            r.notes.push(format!("couldn't verify: {e:#}"));
+            r.notes.push(lwd::plain_error(server, &e));
             return r;
         }
     };

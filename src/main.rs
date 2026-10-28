@@ -47,12 +47,19 @@ enum Cmd {
         server: String,
         #[arg(long, default_value = "127.0.0.1:9067")]
         listen: String,
-        /// Reach the server through a Tor SOCKS proxy, e.g. 127.0.0.1:9050
+        /// Tor SOCKS proxy to reach the server through (default: 127.0.0.1:9050 if it's running)
         #[arg(long)]
         tor: Option<String>,
-        /// Check blocks within this many blocks of the tip
+        /// Connect to the server directly, without Tor
+        #[arg(long)]
+        direct: bool,
+        /// Check every block within this many blocks of the tip
         #[arg(long, default_value_t = 100)]
         window: u64,
+        /// Also check older blocks at random, about one in this many (off by
+        /// default: peers would see which older heights the wallet syncs)
+        #[arg(long, default_value_t = 0)]
+        sample: u64,
         /// Also refuse blocks that two peers couldn't confirm
         #[arg(long)]
         strict: bool,
@@ -105,7 +112,14 @@ async fn main() -> Result<()> {
     let cli = Cli::parse();
     match cli.cmd {
         Cmd::Check { server, blocks, tor, json, test_drop_note } => {
+            let blocks = clamp_window(blocks);
             let route = tor.map(Route::Tor).unwrap_or(Route::Direct);
+            // Reach the server first, so a wrong address fails in seconds.
+            eprintln!("Reaching {server}...");
+            if let Err(e) = lwd::reach(&server, &route).await {
+                eprintln!("{e}");
+                std::process::exit(3);
+            }
             eprintln!("Connecting to Zcash peers...");
             let mut reference = Reference::new(4).await?;
             eprintln!("Checking {server}...");
@@ -122,11 +136,10 @@ async fn main() -> Result<()> {
             } else {
                 print_report(&r);
             }
-            if r.complete == Status::Fail || r.current == Status::Fail {
-                std::process::exit(2);
-            }
+            std::process::exit(exit_code(&r));
         }
         Cmd::Selftest { server, blocks } => {
+            let blocks = clamp_window(blocks);
             eprintln!("Connecting to Zcash peers...");
             let mut reference = Reference::new(4).await?;
             eprintln!("Changing real blocks from {server}...");
@@ -140,20 +153,41 @@ async fn main() -> Result<()> {
                         println!("  MISSED {m}");
                     }
                     if r.caught != r.tried {
-                        std::process::exit(2);
+                        std::process::exit(1);
                     }
                 }
                 None => anyhow::bail!("couldn't get verified blocks from {server}"),
             }
         }
-        Cmd::Proxy { server, listen, tor, window, strict, test_drop_note } => {
-            let route = tor.map(Route::Tor).unwrap_or(Route::Direct);
+        Cmd::Proxy { server, listen, tor, direct, window, sample, strict, test_drop_note } => {
+            // Tor by default: use the given proxy, or a local Tor if one is running.
+            let route = if direct {
+                Route::Direct
+            } else if let Some(t) = tor {
+                Route::Tor(t)
+            } else if tokio::net::TcpStream::connect("127.0.0.1:9050").await.is_ok() {
+                Route::Tor("127.0.0.1:9050".into())
+            } else {
+                eprintln!("No Tor found at 127.0.0.1:9050, so the server will see this machine's IP. Start Tor, or pass --direct to silence this.");
+                Route::Direct
+            };
+            if sample > 0 {
+                // Peers are reached directly (Tor exits don't carry port 8233), so
+                // fetching the wallet's older blocks shows peers roughly which heights it syncs.
+                eprintln!("Spot-checking about one in {sample} older blocks. Zcash peers will see which older heights this machine fetches.");
+            }
+            let upstream = match lwd::connect(&server, &route).await {
+                Ok(u) => u,
+                Err(e) => {
+                    eprintln!("{}", lwd::plain_error(&server, &e));
+                    std::process::exit(3);
+                }
+            };
             eprintln!("Connecting to Zcash peers...");
             let reference = Reference::new(4).await?;
-            let upstream = lwd::connect(&server, &route).await?;
             let addr: std::net::SocketAddr = listen.parse()?;
             eprintln!(
-                "Light-wallet server on http://{addr}, forwarding to {server} ({}). Recent blocks are checked against Zcash peers.",
+                "Light-wallet server on http://{addr}, forwarding to {server} ({}). Every block in the last {window} is checked against Zcash peers.",
                 match route { Route::Direct => "direct", Route::Tor(_) => "over Tor" }
             );
             let svc = proxy::Proxy {
@@ -162,6 +196,12 @@ async fn main() -> Result<()> {
                 window,
                 strict,
                 test_drop_note,
+                sample,
+                secret: p2p::dsha256(&std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .map(|d| d.as_nanos())
+                    .unwrap_or(0)
+                    .to_le_bytes()),
             };
             tonic::transport::Server::builder()
                 .add_service(lwd::rpc::compact_tx_streamer_server::CompactTxStreamerServer::new(svc).max_decoding_message_size(64 * 1024 * 1024))
@@ -223,6 +263,32 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
+/// Zcash nodes cap how many blocks one address may download, so a check
+/// covers at most this many recent blocks.
+const MAX_WINDOW: u64 = 60;
+
+fn clamp_window(blocks: u64) -> u64 {
+    if blocks > MAX_WINDOW {
+        eprintln!("Zcash peers limit how many blocks one address can download, so this checks the latest {MAX_WINDOW} blocks.");
+        MAX_WINDOW
+    } else {
+        blocks.max(2)
+    }
+}
+
+/// 0 when every check passes, 1 when any fails, 3 when something couldn't
+/// be verified and nothing failed.
+fn exit_code(r: &CheckResult) -> i32 {
+    let all = [r.complete, r.current, r.nu7];
+    if all.contains(&Status::Fail) {
+        1
+    } else if all.contains(&Status::Unverified) {
+        3
+    } else {
+        0
+    }
+}
+
 fn mark(s: Status) -> &'static str {
     match s {
         Status::Pass => "PASS",
@@ -233,7 +299,7 @@ fn mark(s: Status) -> &'static str {
 
 fn print_report(r: &CheckResult) {
     println!();
-    println!("{} ({})", r.server, r.route);
+    println!("{}{}", r.server, if r.route == "test" { String::new() } else { format!(" ({})", r.route) });
     if !r.info.software.is_empty() {
         println!("  server: {}, node {}, tip {}", r.info.software, r.info.node, r.server_tip);
     }
@@ -264,12 +330,13 @@ fn print_report(r: &CheckResult) {
         Some(t) => println!("  Current   {}  server tip {}, network tip {t}", mark(r.current), r.server_tip),
         None => println!("  Current   {}", mark(r.current)),
     }
-    println!(
-        "  NU7       {}  server reports {} at {}",
-        mark(r.nu7),
-        if r.info.reported_upgrade.is_empty() { "no pending upgrade" } else { &r.info.reported_upgrade },
-        r.info.reported_upgrade_height
-    );
+    if r.info.software.is_empty() {
+        println!("  NU7       {}", mark(r.nu7));
+    } else if r.info.reported_upgrade.is_empty() {
+        println!("  NU7       {}  server reports no upcoming upgrade", mark(r.nu7));
+    } else {
+        println!("  NU7       {}  server reports {} at {}", mark(r.nu7), r.info.reported_upgrade, r.info.reported_upgrade_height);
+    }
     for m in r.mismatches.iter().take(20) {
         println!("  MISMATCH  block {}, tx {}...: {}", m.height, &m.txid[..16], m.what);
     }
