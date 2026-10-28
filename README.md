@@ -10,7 +10,7 @@ A shielded wallet can't see the chain itself. It only decrypts what its server s
 
 **Live table:** https://honest-server.vercel.app
 
-**Try it in 30 seconds** (needs Rust; nothing else):
+**Try it in 30 seconds.** Download a binary for Linux or macOS from [Releases](https://github.com/kinnuworks/honest-server/releases/latest), or build it (needs Rust, nothing else):
 
 ```bash
 cargo install --git https://github.com/kinnuworks/honest-server
