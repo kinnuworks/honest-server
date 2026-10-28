@@ -346,4 +346,53 @@ mod tests {
         raw.push(0);
         assert!(verify_block(&raw, &hash_of(BLOCK_3533600), 3_533_600).is_err());
     }
+
+    /// A small deterministic generator, so failures can be reproduced.
+    fn xorshift(state: &mut u64) -> u64 {
+        *state ^= *state << 13;
+        *state ^= *state >> 7;
+        *state ^= *state << 17;
+        *state
+    }
+
+    /// Since NU5 a txid commits to a transaction's effects (nullifiers, note
+    /// commitments, keys, ciphertexts) but not to its signatures and proofs,
+    /// which the header commits to through the chain history root. So a flipped
+    /// bit may pass only if every field the comparison uses is unchanged.
+    #[test]
+    fn random_bit_flips_never_change_the_compared_fields_unnoticed() {
+        let hash = hash_of(BLOCK_3533761);
+        let honest = verify_block(BLOCK_3533761, &hash, 3_533_761).unwrap();
+        let mut rng = 0x5eed_u64;
+        let (mut rejected, mut auth_only) = (0, 0);
+        for _ in 0..2000 {
+            let mut raw = BLOCK_3533761.to_vec();
+            let i = (xorshift(&mut rng) as usize) % raw.len();
+            raw[i] ^= 1u8 << (xorshift(&mut rng) % 8);
+            match verify_block(&raw, &hash, 3_533_761) {
+                Err(_) => rejected += 1,
+                Ok(b) => {
+                    assert_eq!(b.txs, honest.txs, "byte {i} changed a compared field and was accepted");
+                    auth_only += 1;
+                }
+            }
+        }
+        assert_eq!(rejected + auth_only, 2000);
+        assert!(rejected > 0);
+    }
+
+    #[test]
+    fn random_bytes_never_crash_the_parsers() {
+        let mut rng = 0xfeed_u64;
+        for _ in 0..3000 {
+            let len = (xorshift(&mut rng) % 2000) as usize;
+            let junk: Vec<u8> = (0..len).map(|_| xorshift(&mut rng) as u8).collect();
+            let _ = verify_block(&junk, &[0u8; 32], 3_533_761);
+            let _ = verify_header(&junk);
+            let mut buf = junk.clone();
+            let _ = crate::p2p::parse_message(&mut buf);
+            let mut pos = 0;
+            let _ = crate::p2p::read_compact_size(&junk, &mut pos);
+        }
+    }
 }

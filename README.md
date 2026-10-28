@@ -75,11 +75,12 @@ Who sees what:
 - The public table probes from one machine through three Tor exits per server. A server that singles out one particular wallet (by its address or its sync pattern) could still pass; the local check, run from your own connection, is how you catch that.
 - It can't see what a server logs about the wallets that connect to it.
 - It doesn't test transaction submission, mempool calls or tree states.
+- It doesn't verify signatures or proofs. Since NU5 a transaction ID commits to what a transaction does (nullifiers, commitments, keys, ciphertexts), which is what compact blocks carry and what Honest Server compares; signatures and proofs are committed through the chain history root, which it doesn't track. A test flips 2,000 random bits in a real block: every flip that changes a compared field is rejected.
 - NU7 readiness comes from the node release the server reports (Zebra 7.0.0 and Zakura 1.7.0 are the first that follow NU7). A server can misreport its version.
 
 ## Tests
 
-40 tests run in CI on Linux and macOS, on three real mainnet blocks (3,533,600, 3,533,755 with Sapling spends, 3,533,761 with Ironwood actions): blocks verify; a wrong height, hash, transaction byte, trailing byte or Equihash solution is rejected; every kind of change to a compact block is caught; the P2P message parser rejects bad checksums, other networks and oversized messages; the NU7 rule follows node releases. A second CI job runs `check` and `selftest` against a real server and real peers on every push.
+42 tests run in CI on Linux and macOS, on three real mainnet blocks (3,533,600, 3,533,755 with Sapling spends, 3,533,761 with Ironwood actions): blocks verify; a wrong height, hash, transaction byte, trailing byte or Equihash solution is rejected; every kind of change to a compact block is caught; the P2P message parser rejects bad checksums, other networks and oversized messages; the NU7 rule follows node releases. A second CI job runs `check` and `selftest` against a real server and real peers on every push.
 
 ## Exit codes
 
