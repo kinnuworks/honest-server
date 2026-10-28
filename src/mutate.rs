@@ -175,4 +175,26 @@ mod tests {
         assert!(r.tried > 100, "fixture gives many mutations ({})", r.tried);
         assert_eq!(r.caught, r.tried, "missed: {:?}", r.missed);
     }
+
+    #[test]
+    fn every_change_to_a_block_with_sapling_spends_is_caught() {
+        let f = crate::compare::tests::load(include_bytes!("../tests/fixtures/block-3533755.bin"), 3_533_755);
+        let c = crate::compare::tests::honest(&f);
+        let mut r = super::MutationReport::default();
+        assert!(super::run(&f, &c, &mut r));
+        assert!(r.by_kind.contains_key("change a Sapling nullifier"));
+        assert_eq!(r.caught, r.tried, "missed: {:?}", r.missed);
+    }
+
+    #[test]
+    fn a_block_that_already_mismatches_is_not_counted() {
+        let f = crate::compare::tests::full();
+        let mut c = crate::compare::tests::honest(&f);
+        // Remove a shielded transaction, so the unchanged block already mismatches.
+        let i = c.vtx.iter().position(|t| !t.ironwood_actions.is_empty()).unwrap();
+        c.vtx.remove(i);
+        let mut r = super::MutationReport::default();
+        assert!(!super::run(&f, &c, &mut r));
+        assert_eq!(r.tried, 0);
+    }
 }

@@ -191,28 +191,7 @@ impl Peer {
     }
 
     fn take_message(&mut self) -> Result<Option<(String, Vec<u8>)>> {
-        if self.buf.len() < 24 {
-            return Ok(None);
-        }
-        if self.buf[..4] != MAGIC {
-            bail!("wrong network magic");
-        }
-        let len = u32::from_le_bytes(self.buf[16..20].try_into().unwrap()) as usize;
-        if len > MAX_PAYLOAD {
-            bail!("message too large");
-        }
-        if self.buf.len() < 24 + len {
-            return Ok(None);
-        }
-        let cmd = String::from_utf8_lossy(&self.buf[4..16])
-            .trim_end_matches('\0')
-            .to_string();
-        let payload = self.buf[24..24 + len].to_vec();
-        if dsha256(&payload)[..4] != self.buf[20..24] {
-            bail!("bad checksum");
-        }
-        self.buf.drain(..24 + len);
-        Ok(Some((cmd, payload)))
+        parse_message(&mut self.buf)
     }
 
     /// Asks for the headers that follow `locator` (hashes in internal byte order,
@@ -305,6 +284,30 @@ impl Peer {
     }
 }
 
+/// Takes one complete message off the front of `buf`, if there is one.
+pub fn parse_message(buf: &mut Vec<u8>) -> Result<Option<(String, Vec<u8>)>> {
+    if buf.len() < 24 {
+        return Ok(None);
+    }
+    if buf[..4] != MAGIC {
+        bail!("wrong network magic");
+    }
+    let len = u32::from_le_bytes(buf[16..20].try_into().unwrap()) as usize;
+    if len > MAX_PAYLOAD {
+        bail!("message too large");
+    }
+    if buf.len() < 24 + len {
+        return Ok(None);
+    }
+    let cmd = String::from_utf8_lossy(&buf[4..16]).trim_end_matches('\0').to_string();
+    let payload = buf[24..24 + len].to_vec();
+    if dsha256(&payload)[..4] != buf[20..24] {
+        bail!("bad checksum");
+    }
+    buf.drain(..24 + len);
+    Ok(Some((cmd, payload)))
+}
+
 /// Resolves the DNS seeders and returns candidate peer addresses.
 pub async fn seed_addresses() -> Vec<SocketAddr> {
     let mut out = Vec::new();
@@ -370,4 +373,70 @@ pub async fn connect_peers(want: usize, min_version: i32) -> Vec<Peer> {
         }
     }
     peers
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn compact_size_round_trips_at_every_width() {
+        for n in [0u64, 1, 0xfc, 0xfd, 0xffff, 0x1_0000, 0xffff_ffff, 0x1_0000_0000, u64::MAX] {
+            let mut buf = Vec::new();
+            write_compact_size(&mut buf, n);
+            let mut pos = 0;
+            assert_eq!(read_compact_size(&buf, &mut pos).unwrap(), n);
+            assert_eq!(pos, buf.len());
+        }
+    }
+
+    #[test]
+    fn truncated_compact_size_is_an_error() {
+        let mut pos = 0;
+        assert!(read_compact_size(&[0xfd, 0x01], &mut pos).is_err());
+    }
+
+    #[test]
+    fn framed_message_parses_back() {
+        let mut buf = frame("ping", &[1, 2, 3, 4, 5, 6, 7, 8]);
+        buf.extend(frame("verack", &[]));
+        assert_eq!(parse_message(&mut buf).unwrap(), Some(("ping".into(), vec![1, 2, 3, 4, 5, 6, 7, 8])));
+        assert_eq!(parse_message(&mut buf).unwrap(), Some(("verack".into(), vec![])));
+        assert!(buf.is_empty());
+    }
+
+    #[test]
+    fn partial_message_waits_for_more_bytes() {
+        let full = frame("headers", &[0u8; 100]);
+        let mut buf = full[..60].to_vec();
+        assert_eq!(parse_message(&mut buf).unwrap(), None);
+        buf.extend_from_slice(&full[60..]);
+        assert!(parse_message(&mut buf).unwrap().is_some());
+    }
+
+    #[test]
+    fn bad_checksum_and_wrong_network_are_rejected() {
+        let mut buf = frame("ping", &[9; 8]);
+        buf[30] ^= 1;
+        assert!(parse_message(&mut buf).is_err());
+        let mut buf = frame("ping", &[9; 8]);
+        buf[0] = 0xfa; // testnet or another chain
+        assert!(parse_message(&mut buf).is_err());
+    }
+
+    #[test]
+    fn oversized_message_is_rejected() {
+        let mut buf = frame("block", &[]);
+        buf[16..20].copy_from_slice(&((MAX_PAYLOAD as u32) + 1).to_le_bytes());
+        assert!(parse_message(&mut buf).is_err());
+    }
+
+    #[test]
+    fn version_message_advertises_nu7() {
+        let p = version_payload();
+        assert_eq!(i32::from_le_bytes(p[..4].try_into().unwrap()), 170_190);
+        let mut pos = 80;
+        let len = read_compact_size(&p, &mut pos).unwrap() as usize;
+        assert_eq!(&p[pos..pos + len], USER_AGENT);
+    }
 }

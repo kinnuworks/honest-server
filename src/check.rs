@@ -50,9 +50,18 @@ pub struct CheckResult {
     pub unverified_blocks: Vec<u64>,
     pub mismatches: Vec<Mismatch>,
     pub notes: Vec<String>,
+    /// Over Tor: how many separate exits got blocks that matched the verified ones.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub exits: Option<ExitCheck>,
     /// Only for the test row: what a consistency-only check says.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub consistency_only: Option<ConsistencyResult>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct ExitCheck {
+    pub exits: usize,
+    pub matched: usize,
 }
 
 #[derive(Debug, Serialize)]
@@ -284,6 +293,7 @@ pub async fn check(server: &str, route: &Route, window: u64, reference: &mut Ref
         mismatches: vec![],
         notes: vec![],
         consistency_only: None,
+        exits: None,
     };
     let blocks = match fetch_server(server, route, window, &mut r).await {
         Ok(b) => b,
@@ -293,7 +303,51 @@ pub async fn check(server: &str, route: &Route, window: u64, reference: &mut Ref
         }
     };
     judge(&mut r, &blocks, reference).await;
+    if let (Route::Tor(_), Some((start, end))) = (route, r.range) {
+        cross_check_exits(&mut r, server, route, start, end, reference).await;
+    }
     r
+}
+
+/// Extra Tor circuits used per server, on top of the first one.
+const EXTRA_EXITS: usize = 2;
+
+/// Fetches the same block range through more Tor circuits (each leaves from a
+/// different exit) and compares every copy with the verified blocks. A server
+/// that lies only to some clients would give some exits a different answer.
+async fn cross_check_exits(r: &mut CheckResult, server: &str, route: &Route, start: u64, end: u64, reference: &mut Reference) {
+    let mut agreed = 1;
+    for exit in 2..=EXTRA_EXITS + 1 {
+        let fetched = async {
+            let mut c = lwd::connect(server, route).await?;
+            lwd::blocks(&mut c, start, end).await
+        }
+        .await;
+        let Ok(blocks) = fetched else {
+            r.notes.push(format!("Tor exit {exit} couldn't reach the server"));
+            continue;
+        };
+        let mut found = Vec::new();
+        for b in &blocks {
+            let Ok(hash) = <[u8; 32]>::try_from(b.hash.as_slice()) else { continue };
+            if let Some(Some((full, _))) = reference.cache.get(&hash) {
+                found.extend(compare::compare_block(full, b, &mut Tally::default()));
+            }
+        }
+        if blocks.len() as u64 != end - start + 1 {
+            r.notes.push(format!("Tor exit {exit} got {} blocks, the first exit got {}", blocks.len(), end - start + 1));
+        } else if found.is_empty() {
+            agreed += 1;
+        }
+        for mut m in found {
+            m.what = format!("{} (through Tor exit {exit})", m.what);
+            r.mismatches.push(m);
+        }
+    }
+    r.exits = Some(ExitCheck { exits: EXTRA_EXITS + 1, matched: agreed });
+    if !r.mismatches.is_empty() {
+        r.complete = Status::Fail;
+    }
 }
 
 /// Reads the server's info, tip and the compact blocks for the window, in the
@@ -457,6 +511,7 @@ pub async fn test_row(base: &str, route: &Route, window: u64, reference: &mut Re
         mismatches: vec![],
         notes: vec![],
         consistency_only: None,
+        exits: None,
     };
     let blocks = fetch_server(base, route, window, &mut r).await.ok()?;
     let (altered, desc) = compare::drop_one_note(&blocks)?;
@@ -507,5 +562,55 @@ fn blank(server: &str) -> CheckResult {
         mismatches: vec![],
         notes: vec![],
         consistency_only: None,
+        exits: None,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn with(node: &str, upgrade: &str, height: u64, tip: u64, branch: &str) -> CheckResult {
+        let mut r = blank("test");
+        r.info.node = node.into();
+        r.info.reported_upgrade = upgrade.into();
+        r.info.reported_upgrade_height = height;
+        r.info.consensus_branch_id = branch.into();
+        r.server_tip = tip;
+        r
+    }
+
+    #[test]
+    fn versions_parse() {
+        assert_eq!(parse_version("7.0.0"), Some(([7, 0, 0], false)));
+        assert_eq!(parse_version("7.0.0-rc.0"), Some(([7, 0, 0], true)));
+        assert_eq!(parse_version("1.7.0+gc572f8"), Some(([1, 7, 0], false)));
+        assert_eq!(parse_version("6.4"), Some(([6, 4, 0], false)));
+        assert_eq!(parse_version("x"), None);
+    }
+
+    #[test]
+    fn nu7_readiness_follows_the_node_release() {
+        let tip = 3_533_800;
+        assert_eq!(nu7_status(&with("Zebra:6.4.2", "NU6.3", 3_428_143, tip, "37a5165b")).0, Status::Fail);
+        assert_eq!(nu7_status(&with("Zebra:7.0.0-rc.0", "NU7", NU7_HEIGHT, tip, "37a5165b")).0, Status::Fail);
+        assert_eq!(nu7_status(&with("Zebra:7.0.0", "NU7", NU7_HEIGHT, tip, "37a5165b")).0, Status::Pass);
+        assert_eq!(nu7_status(&with("Zakura:1.7.0", "NU7", NU7_HEIGHT, tip, "37a5165b")).0, Status::Pass);
+        assert_eq!(nu7_status(&with("Zakura:1.6.9", "", 0, tip, "37a5165b")).0, Status::Fail);
+    }
+
+    #[test]
+    fn unknown_node_falls_back_to_the_reported_upgrade() {
+        let tip = 3_533_800;
+        assert_eq!(nu7_status(&with("", "NU7", NU7_HEIGHT, tip, "")).0, Status::Pass);
+        assert_eq!(nu7_status(&with("", "", 0, tip, "")).0, Status::Unverified);
+        assert_eq!(nu7_status(&with("MagicBean:6.20.0", "", 0, tip, "")).0, Status::Unverified);
+    }
+
+    #[test]
+    fn after_activation_the_branch_id_decides() {
+        let after = NU7_HEIGHT + 10;
+        assert_eq!(nu7_status(&with("Zebra:7.0.0", "", 0, after, "77190ad9")).0, Status::Pass);
+        assert_eq!(nu7_status(&with("Zebra:7.0.0", "", 0, after, "37a5165b")).0, Status::Fail);
     }
 }

@@ -20,7 +20,7 @@ honest-server check zec.rocks:443 --test-drop-note
 
 The first command checks the server for real. The second takes the same real data, removes one shielded note and patches the tree sizes so the chain still adds up, then shows that Honest Server catches it.
 
-`honest-server selftest zec.rocks:443` goes further: it makes every single change it can to the server's real blocks and counts how many the check catches. The live page shows the latest run: on 24 mainnet blocks from zec.rocks on Oct 28 2026 it tried 1,035 changes across Sapling, Orchard and Ironwood (Zcash's three shielded pools) and caught all 1,035.
+`honest-server selftest zec.rocks:443` goes further: it makes every single change it can to the server's real blocks and counts how many the check catches. The live page shows the latest run. On Oct 28 2026 at 17:44 UTC, on 24 mainnet blocks, it tried 1,503 changes across Sapling, Orchard and Ironwood (Zcash's three shielded pools) and caught all 1,503.
 
 ## What it checks
 
@@ -48,17 +48,21 @@ For "Current" it walks the peers' headers forward from the server's last block, 
 
 The local check (`honest-server check`) talks only to the server you name and to Zcash peers. It sends nothing to us and needs no keys or wallet data.
 
-The public table probes each server over Tor, each on its own circuit, using the calls a wallet makes when it syncs (server info, latest block, a block range). Servers see a Tor exit, not where the check runs.
+The public table probes each server over Tor, using the calls a wallet makes when it syncs (server info, latest block, a block range). It fetches the same blocks through three separate Tor circuits, each leaving from a different exit, and compares every copy with the verified blocks. A server that lies only to some clients would give some exits a different answer. Servers see a Tor exit, not where the check runs.
 
 Pass `--tor 127.0.0.1:9050` to run your own check over Tor too.
 
 ## Limits
 
 - It checks a window of recent blocks, not the whole chain.
-- The public table probes from one machine. A server that lies only to particular wallets would pass the table; the local check, run from your own connection, is how you catch that.
+- The public table probes from one machine through three Tor exits per server. A server that singles out one particular wallet (by its address or its sync pattern) could still pass; the local check, run from your own connection, is how you catch that.
 - It can't see what a server logs about the wallets that connect to it.
 - It doesn't test transaction submission, mempool calls or tree states.
 - NU7 readiness comes from the node release the server reports (Zebra 7.0.0 and Zakura 1.7.0 are the first that follow NU7). A server can misreport its version.
+
+## Tests
+
+39 tests run in CI on Linux and macOS, on three real mainnet blocks (3,533,600, 3,533,755 with Sapling spends, 3,533,761 with Ironwood actions): blocks verify; a wrong height, hash, transaction byte, trailing byte or Equihash solution is rejected; every kind of change to a compact block is caught; the P2P message parser rejects bad checksums, other networks and oversized messages; the NU7 rule follows node releases. A second CI job runs `check` and `selftest` against a real server and real peers on every push.
 
 ## Commands
 

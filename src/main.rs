@@ -213,6 +213,9 @@ fn print_report(r: &CheckResult) {
         }
         None => println!("  Complete  {}", mark(r.complete)),
     }
+    if let Some(x) = &r.exits {
+        println!("  Exits     {} of {} Tor exits got blocks that match the verified ones", x.matched, x.exits);
+    }
     match r.network_tip {
         Some(t) => println!("  Current   {}  server tip {}, network tip {t}", mark(r.current), r.server_tip),
         None => println!("  Current   {}", mark(r.current)),

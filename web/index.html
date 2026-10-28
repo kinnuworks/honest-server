@@ -134,7 +134,7 @@ function row(r) {
   const tip = r.network_tip ? `<span class="note">tip ${n(r.server_tip)}, network ${n(r.network_tip)}</span>` : "";
   return `<tr>
     <td><code>${esc(r.server)}</code>${notes(r)}</td>
-    <td>${pill(r.complete)}</td>
+    <td>${pill(r.complete)}${r.exits ? `<span class="note">${r.exits.matched} of ${r.exits.exits} Tor exits matched</span>` : ""}</td>
     <td>${pill(r.current)}${tip}</td>
     <td>${pill(r.nu7)}</td>
     <td class="num">${has ? `${n(r.range[0])}–${n(r.range[1])}` : ""}</td>

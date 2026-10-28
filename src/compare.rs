@@ -221,10 +221,15 @@ pub mod tests {
     use crate::verify::{verify_block, VerifiedBlock};
 
     const RAW: &[u8] = include_bytes!("../tests/fixtures/block-3533761.bin");
+    const RAW_SPENDS: &[u8] = include_bytes!("../tests/fixtures/block-3533755.bin");
 
     pub fn full() -> VerifiedBlock {
-        let hash = zcash_primitives::block::BlockHeader::read(RAW).unwrap().hash().0;
-        verify_block(RAW, &hash, 3_533_761).unwrap()
+        load(RAW, 3_533_761)
+    }
+
+    pub fn load(raw: &[u8], height: u32) -> VerifiedBlock {
+        let hash = zcash_primitives::block::BlockHeader::read(raw).unwrap().hash().0;
+        verify_block(raw, &hash, height).unwrap()
     }
 
     /// The compact block an honest server would send for `full`.
@@ -236,7 +241,7 @@ pub mod tests {
             ciphertext: a.ciphertext.clone(),
         };
         CompactBlock {
-            height: 3_533_761,
+            height: full.height as u64,
             vtx: full
                 .txs
                 .iter()
@@ -317,5 +322,107 @@ pub mod tests {
         });
         let m = compare_block(&f, &c, &mut Tally::default());
         assert!(m.iter().any(|m| m.what.contains("does not contain")));
+    }
+
+    fn caught(f: &VerifiedBlock, c: &CompactBlock, needle: &str) -> bool {
+        compare_block(f, c, &mut Tally::default()).iter().any(|m| m.what.contains(needle))
+    }
+
+    #[test]
+    fn sapling_spend_block_matches_and_changed_spend_is_caught() {
+        let f = load(RAW_SPENDS, 3_533_755);
+        let mut c = honest(&f);
+        let mut tally = Tally::default();
+        assert!(compare_block(&f, &c, &mut tally).is_empty());
+        assert!(tally.nullifiers >= 5);
+        let tx = c.vtx.iter_mut().find(|t| !t.spends.is_empty()).unwrap();
+        tx.spends[0].nf[5] ^= 1;
+        assert!(caught(&f, &c, "Sapling spend 0: nullifier differs"));
+    }
+
+    #[test]
+    fn dropped_sapling_spend_is_caught() {
+        let f = load(RAW_SPENDS, 3_533_755);
+        let mut c = honest(&f);
+        c.vtx.iter_mut().find(|t| !t.spends.is_empty()).unwrap().spends.pop();
+        assert!(caught(&f, &c, "Sapling spends"));
+    }
+
+    #[test]
+    fn changed_output_fields_are_each_caught() {
+        let f = load(RAW_SPENDS, 3_533_755);
+        for field in 0..3 {
+            let mut c = honest(&f);
+            let o = &mut c.vtx.iter_mut().find(|t| !t.outputs.is_empty()).unwrap().outputs[0];
+            match field {
+                0 => o.cmu[0] ^= 1,
+                1 => o.ephemeral_key[0] ^= 1,
+                _ => o.ciphertext[51] ^= 1,
+            }
+            let want = ["note commitment differs", "ephemeral key differs", "compact ciphertext differs"][field];
+            assert!(caught(&f, &c, want), "{want}");
+        }
+    }
+
+    #[test]
+    fn moved_transaction_is_caught_as_missing_and_extra() {
+        let f = full();
+        let mut c = honest(&f);
+        let tx = c.vtx.iter_mut().find(|t| !t.ironwood_actions.is_empty()).unwrap();
+        tx.index += 1000;
+        assert!(caught(&f, &c, "missing from the compact block"));
+        assert!(caught(&f, &c, "does not contain"));
+    }
+
+    #[test]
+    fn changed_txid_is_caught() {
+        let f = full();
+        let mut c = honest(&f);
+        c.vtx.iter_mut().find(|t| !t.ironwood_actions.is_empty()).unwrap().txid[0] ^= 1;
+        assert!(caught(&f, &c, "txid differs"));
+    }
+
+    #[test]
+    fn transparent_only_transactions_are_ignored() {
+        let f = full();
+        let mut c = honest(&f);
+        c.vtx.push(CompactTx { index: 777, txid: vec![5; 32], ..Default::default() });
+        assert!(compare_block(&f, &c, &mut Tally::default()).is_empty());
+    }
+
+    fn chain(n: u64) -> Vec<CompactBlock> {
+        (0..n)
+            .map(|i| CompactBlock {
+                height: 100 + i,
+                hash: vec![i as u8 + 1; 32],
+                prev_hash: vec![i as u8; 32],
+                chain_metadata: Some(ChainMetadata::default()),
+                ..Default::default()
+            })
+            .collect()
+    }
+
+    #[test]
+    fn consistency_only_check_sees_gaps_broken_links_and_bad_tree_sizes() {
+        assert!(consistency_only(&chain(3)).is_ok());
+        let mut gap = chain(3);
+        gap[2].height += 1;
+        assert!(consistency_only(&gap).unwrap_err().contains("jumps"));
+        let mut link = chain(3);
+        link[2].prev_hash = vec![9; 32];
+        assert!(consistency_only(&link).unwrap_err().contains("link"));
+        let mut size = chain(3);
+        size[2].chain_metadata.as_mut().unwrap().orchard_commitment_tree_size = 5;
+        assert!(consistency_only(&size).unwrap_err().contains("Orchard"));
+    }
+
+    #[test]
+    fn drop_one_note_prefers_a_transaction_with_two_notes() {
+        let f = full();
+        let (altered, desc) = drop_one_note(&[honest(&f)]).unwrap();
+        let m = compare_block(&f, &altered[0], &mut Tally::default());
+        assert_eq!(m.len(), 1);
+        assert!(m[0].what.contains("server sent"), "a note-level mismatch: {}", m[0].what);
+        assert!(desc.contains("dropped one"));
     }
 }

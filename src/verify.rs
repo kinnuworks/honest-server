@@ -237,6 +237,8 @@ mod tests {
     // and Ironwood activity; 3,533,600 holds only the coinbase.
     pub const BLOCK_3533761: &[u8] = include_bytes!("../tests/fixtures/block-3533761.bin");
     const BLOCK_3533600: &[u8] = include_bytes!("../tests/fixtures/block-3533600.bin");
+    // 3,533,755 carries Sapling spends.
+    pub const BLOCK_3533755: &[u8] = include_bytes!("../tests/fixtures/block-3533755.bin");
 
     fn hash_of(raw: &[u8]) -> [u8; 32] {
         BlockHeader::read(raw).unwrap().hash().0
@@ -283,5 +285,65 @@ mod tests {
     fn merkle_root_of_one_txid_is_the_txid() {
         let t = [7u8; 32];
         assert_eq!(merkle_root(&[t]), t);
+    }
+
+    #[test]
+    fn sapling_spend_block_verifies_with_its_nullifiers() {
+        let b = verify_block(BLOCK_3533755, &hash_of(BLOCK_3533755), 3_533_755).unwrap();
+        let spends: usize = b.txs.iter().map(|t| t.sapling_nullifiers.len()).sum();
+        assert_eq!(spends, 5, "block 3,533,755 has 5 Sapling spends");
+    }
+
+    #[test]
+    fn every_fixture_header_has_valid_proof_of_work() {
+        for raw in [BLOCK_3533600, BLOCK_3533755, BLOCK_3533761] {
+            let h = verify_header(&raw[..1487]).unwrap();
+            assert_eq!(h.hash, hash_of(raw));
+        }
+    }
+
+    #[test]
+    fn headers_link_to_their_parent() {
+        // 3,533,600 and 3,533,761 are far apart; a header's prev is never itself.
+        let h = verify_header(&BLOCK_3533761[..1487]).unwrap();
+        assert_ne!(h.prev, h.hash);
+    }
+
+    #[test]
+    fn merkle_root_duplicates_the_last_txid_on_odd_levels() {
+        let (a, b, c) = ([1u8; 32], [2u8; 32], [3u8; 32]);
+        let pair = |x: [u8; 32], y: [u8; 32]| {
+            let mut buf = [0u8; 64];
+            buf[..32].copy_from_slice(&x);
+            buf[32..].copy_from_slice(&y);
+            dsha256(&buf)
+        };
+        assert_eq!(merkle_root(&[a, b, c]), pair(pair(a, b), pair(c, c)));
+        assert_eq!(merkle_root(&[a, b]), pair(a, b));
+    }
+
+    #[test]
+    fn target_check_accepts_real_and_rejects_bad_bits() {
+        let raw = &BLOCK_3533761[..1487];
+        let hd = BlockHeader::read(raw).unwrap();
+        assert!(meets_target(&hd.hash().0, hd.bits));
+        // An impossible target (exponent 3, mantissa 1) and a negative one.
+        assert!(!meets_target(&hd.hash().0, 0x0300_0001));
+        assert!(!meets_target(&hd.hash().0, 0x1d80_ffff));
+        // An all-zero hash meets any positive target.
+        assert!(meets_target(&[0u8; 32], hd.bits));
+    }
+
+    #[test]
+    fn truncated_block_is_rejected() {
+        let raw = &BLOCK_3533761[..BLOCK_3533761.len() - 10];
+        assert!(verify_block(raw, &hash_of(BLOCK_3533761), 3_533_761).is_err());
+    }
+
+    #[test]
+    fn trailing_bytes_are_rejected() {
+        let mut raw = BLOCK_3533600.to_vec();
+        raw.push(0);
+        assert!(verify_block(&raw, &hash_of(BLOCK_3533600), 3_533_600).is_err());
     }
 }

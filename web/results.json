@@ -1,76 +1,89 @@
 {
-  "generated_at": 1793207652,
+  "generated_at": 1793209489,
   "blocks_per_check": 24,
   "peers": [
-    "/Zebra:7.0.0/ (3533780)",
-    "/Zakura:1.7.0/ (3533781)",
-    "/Zebra:7.0.0/ (3533782)"
+    "/Zakura:1.7.0/ (3533805)",
+    "/Zebra:7.0.0/ (3533804)",
+    "/Zebra:7.0.0/ (3533805)",
+    "/Zebra:7.0.0/ (3533805)",
+    "/Zakura:1.7.0/ (3533806)",
+    "/Zebra:7.0.0/ (3533806)",
+    "/Zakura:1.7.0/ (3533806)",
+    "/Zebra:7.0.0/ (3533806)"
   ],
   "servers": [
     {
       "server": "zec.rocks:443",
       "route": "tor",
-      "checked_at": 1793207652,
+      "checked_at": 1793209489,
       "info": {
         "software": "ECC LightWalletD v0.5.3",
-        "node": "Zebra:7.0.0",
+        "node": "Zakura:1.7.0",
         "reported_upgrade": "NU7",
         "reported_upgrade_height": 3543405,
         "consensus_branch_id": "37a5165b"
       },
-      "server_tip": 3533781,
-      "network_tip": 3533782,
+      "server_tip": 3533803,
+      "network_tip": 3533803,
       "range": [
-        3533757,
-        3533780
+        3533779,
+        3533802
       ],
       "complete": "pass",
       "current": "pass",
       "nu7": "pass",
       "tally": {
         "blocks": 24,
-        "shielded_txs": 42,
-        "commitments": 94,
-        "nullifiers": 92
+        "shielded_txs": 64,
+        "commitments": 132,
+        "nullifiers": 114
       },
       "unverified_blocks": [],
       "mismatches": [],
-      "notes": []
+      "notes": [],
+      "exits": {
+        "exits": 3,
+        "matched": 3
+      }
     },
     {
       "server": "na.zec.rocks:443",
       "route": "tor",
-      "checked_at": 1793207660,
+      "checked_at": 1793209499,
       "info": {
         "software": "ECC LightWalletD v0.5.3",
-        "node": "Zebra:7.0.0",
+        "node": "Zakura:1.7.0",
         "reported_upgrade": "NU7",
         "reported_upgrade_height": 3543405,
         "consensus_branch_id": "37a5165b"
       },
-      "server_tip": 3533782,
-      "network_tip": 3533782,
+      "server_tip": 3533803,
+      "network_tip": 3533803,
       "range": [
-        3533758,
-        3533781
+        3533779,
+        3533802
       ],
       "complete": "pass",
       "current": "pass",
       "nu7": "pass",
       "tally": {
         "blocks": 24,
-        "shielded_txs": 41,
-        "commitments": 92,
-        "nullifiers": 90
+        "shielded_txs": 64,
+        "commitments": 132,
+        "nullifiers": 114
       },
       "unverified_blocks": [],
       "mismatches": [],
-      "notes": []
+      "notes": [],
+      "exits": {
+        "exits": 3,
+        "matched": 3
+      }
     },
     {
       "server": "sa.zec.rocks:443",
       "route": "tor",
-      "checked_at": 1793207664,
+      "checked_at": 1793209507,
       "info": {
         "software": "ECC LightWalletD v0.5.3",
         "node": "Zebra:7.0.0",
@@ -78,59 +91,67 @@
         "reported_upgrade_height": 3543405,
         "consensus_branch_id": "37a5165b"
       },
-      "server_tip": 3533782,
-      "network_tip": 3533782,
+      "server_tip": 3533803,
+      "network_tip": 3533804,
       "range": [
-        3533758,
-        3533781
+        3533779,
+        3533802
       ],
       "complete": "pass",
       "current": "pass",
       "nu7": "pass",
       "tally": {
         "blocks": 24,
-        "shielded_txs": 41,
-        "commitments": 92,
-        "nullifiers": 90
+        "shielded_txs": 64,
+        "commitments": 132,
+        "nullifiers": 114
       },
       "unverified_blocks": [],
       "mismatches": [],
-      "notes": []
+      "notes": [],
+      "exits": {
+        "exits": 3,
+        "matched": 3
+      }
     },
     {
       "server": "eu.zec.rocks:443",
       "route": "tor",
-      "checked_at": 1793207669,
+      "checked_at": 1793209515,
       "info": {
         "software": "ECC LightWalletD v0.5.3",
-        "node": "Zebra:7.0.0",
+        "node": "Zakura:1.7.0",
         "reported_upgrade": "NU7",
         "reported_upgrade_height": 3543405,
         "consensus_branch_id": "37a5165b"
       },
-      "server_tip": 3533782,
-      "network_tip": 3533782,
+      "server_tip": 3533804,
+      "network_tip": 3533804,
       "range": [
-        3533758,
-        3533781
+        3533780,
+        3533803
       ],
       "complete": "pass",
       "current": "pass",
       "nu7": "pass",
       "tally": {
         "blocks": 24,
-        "shielded_txs": 41,
-        "commitments": 92,
-        "nullifiers": 90
+        "shielded_txs": 66,
+        "commitments": 134,
+        "nullifiers": 116
       },
       "unverified_blocks": [],
       "mismatches": [],
-      "notes": []
+      "notes": [],
+      "exits": {
+        "exits": 3,
+        "matched": 3
+      }
     },
     {
       "server": "ap.zec.rocks:443",
       "route": "tor",
-      "checked_at": 1793207704,
+      "checked_at": 1793209551,
       "info": {
         "software": "ECC LightWalletD v0.5.3",
         "node": "Zebra:7.0.0",
@@ -138,29 +159,33 @@
         "reported_upgrade_height": 3543405,
         "consensus_branch_id": "37a5165b"
       },
-      "server_tip": 3533782,
-      "network_tip": 3533782,
+      "server_tip": 3533804,
+      "network_tip": 3533804,
       "range": [
-        3533758,
-        3533781
+        3533780,
+        3533803
       ],
       "complete": "pass",
       "current": "pass",
       "nu7": "pass",
       "tally": {
         "blocks": 24,
-        "shielded_txs": 41,
-        "commitments": 92,
-        "nullifiers": 90
+        "shielded_txs": 66,
+        "commitments": 134,
+        "nullifiers": 116
       },
       "unverified_blocks": [],
       "mismatches": [],
-      "notes": []
+      "notes": [],
+      "exits": {
+        "exits": 3,
+        "matched": 3
+      }
     },
     {
       "server": "us.zec.stardust.rest:443",
       "route": "tor",
-      "checked_at": 1793207709,
+      "checked_at": 1793209564,
       "info": {
         "software": "ECC LightWalletD v0.6.1",
         "node": "Zakura:1.7.0",
@@ -168,29 +193,33 @@
         "reported_upgrade_height": 3543405,
         "consensus_branch_id": "37a5165b"
       },
-      "server_tip": 3533782,
-      "network_tip": 3533782,
+      "server_tip": 3533804,
+      "network_tip": 3533804,
       "range": [
-        3533758,
-        3533781
+        3533780,
+        3533803
       ],
       "complete": "pass",
       "current": "pass",
       "nu7": "pass",
       "tally": {
         "blocks": 24,
-        "shielded_txs": 41,
-        "commitments": 92,
-        "nullifiers": 90
+        "shielded_txs": 66,
+        "commitments": 134,
+        "nullifiers": 116
       },
       "unverified_blocks": [],
       "mismatches": [],
-      "notes": []
+      "notes": [],
+      "exits": {
+        "exits": 3,
+        "matched": 3
+      }
     },
     {
       "server": "eu.zec.stardust.rest:443",
       "route": "tor",
-      "checked_at": 1793207713,
+      "checked_at": 1793209576,
       "info": {
         "software": "ECC LightWalletD v0.6.1",
         "node": "Zakura:1.7.0",
@@ -198,29 +227,33 @@
         "reported_upgrade_height": 3543405,
         "consensus_branch_id": "37a5165b"
       },
-      "server_tip": 3533782,
-      "network_tip": 3533782,
+      "server_tip": 3533804,
+      "network_tip": 3533804,
       "range": [
-        3533758,
-        3533781
+        3533780,
+        3533803
       ],
       "complete": "pass",
       "current": "pass",
       "nu7": "pass",
       "tally": {
         "blocks": 24,
-        "shielded_txs": 41,
-        "commitments": 92,
-        "nullifiers": 90
+        "shielded_txs": 66,
+        "commitments": 134,
+        "nullifiers": 116
       },
       "unverified_blocks": [],
       "mismatches": [],
-      "notes": []
+      "notes": [],
+      "exits": {
+        "exits": 3,
+        "matched": 3
+      }
     },
     {
       "server": "mainnet.zainod.zingolabs.dev:443",
       "route": "tor",
-      "checked_at": 1793207719,
+      "checked_at": 1793209616,
       "info": {
         "software": "zaino 0.11.0-alpha.4",
         "node": "",
@@ -228,31 +261,35 @@
         "reported_upgrade_height": 0,
         "consensus_branch_id": "37a5165b"
       },
-      "server_tip": 3533782,
-      "network_tip": 3533782,
+      "server_tip": 3533804,
+      "network_tip": 3533804,
       "range": [
-        3533758,
-        3533781
+        3533780,
+        3533803
       ],
       "complete": "pass",
       "current": "pass",
       "nu7": "unverified",
       "tally": {
         "blocks": 24,
-        "shielded_txs": 41,
-        "commitments": 92,
-        "nullifiers": 90
+        "shielded_txs": 66,
+        "commitments": 134,
+        "nullifiers": 116
       },
       "unverified_blocks": [],
       "mismatches": [],
       "notes": [
         "couldn't verify NU7: the server doesn't say which node it runs or what upgrade comes next"
-      ]
+      ],
+      "exits": {
+        "exits": 3,
+        "matched": 3
+      }
     },
     {
       "server": "zec-node.cakewallet.com:443",
       "route": "tor",
-      "checked_at": 1793207737,
+      "checked_at": 1793209623,
       "info": {
         "software": "ECC LightWalletD v0.6.0",
         "node": "Zakura:1.7.0",
@@ -260,29 +297,33 @@
         "reported_upgrade_height": 3543405,
         "consensus_branch_id": "37a5165b"
       },
-      "server_tip": 3533782,
-      "network_tip": 3533782,
+      "server_tip": 3533804,
+      "network_tip": 3533804,
       "range": [
-        3533758,
-        3533781
+        3533780,
+        3533803
       ],
       "complete": "pass",
       "current": "pass",
       "nu7": "pass",
       "tally": {
         "blocks": 24,
-        "shielded_txs": 41,
-        "commitments": 92,
-        "nullifiers": 90
+        "shielded_txs": 66,
+        "commitments": 134,
+        "nullifiers": 116
       },
       "unverified_blocks": [],
       "mismatches": [],
-      "notes": []
+      "notes": [],
+      "exits": {
+        "exits": 3,
+        "matched": 3
+      }
     },
     {
       "server": "lwd.blakyniica.xyz:443",
       "route": "tor",
-      "checked_at": 1793207741,
+      "checked_at": 1793209633,
       "info": {
         "software": "",
         "node": "",
@@ -305,13 +346,13 @@
       "unverified_blocks": [],
       "mismatches": [],
       "notes": [
-        "couldn't verify: could not reach lwd.blakyniica.xyz:443 over Tor: transport error: tls handshake eof: tls handshake eof"
+        "couldn't verify: could not reach lwd.blakyniica.xyz:443 over Tor: transport error: deadline has elapsed"
       ]
     },
     {
       "server": "zaino.unsafe.zec.rocks:443",
       "route": "tor",
-      "checked_at": 1793207742,
+      "checked_at": 1793209653,
       "info": {
         "software": "",
         "node": "",
@@ -340,7 +381,7 @@
     {
       "server": "lwd.z0n.jp:443",
       "route": "tor",
-      "checked_at": 1793207746,
+      "checked_at": 1793209655,
       "info": {
         "software": "ECC LightWalletD v0.6.1",
         "node": "Zebra:7.0.0",
@@ -348,29 +389,33 @@
         "reported_upgrade_height": 3543405,
         "consensus_branch_id": "37a5165b"
       },
-      "server_tip": 3533782,
-      "network_tip": 3533782,
+      "server_tip": 3533804,
+      "network_tip": null,
       "range": [
-        3533758,
-        3533781
+        3533780,
+        3533803
       ],
       "complete": "pass",
-      "current": "pass",
+      "current": "unverified",
       "nu7": "pass",
       "tally": {
         "blocks": 24,
-        "shielded_txs": 41,
-        "commitments": 92,
-        "nullifiers": 90
+        "shielded_txs": 66,
+        "commitments": 134,
+        "nullifiers": 116
       },
       "unverified_blocks": [],
       "mismatches": [],
-      "notes": []
+      "notes": [],
+      "exits": {
+        "exits": 3,
+        "matched": 3
+      }
     },
     {
       "server": "l.ombie.cash:443",
       "route": "tor",
-      "checked_at": 1793207752,
+      "checked_at": 1793209669,
       "info": {
         "software": "ECC LightWalletD v0.6.1",
         "node": "Zebra:7.0.0",
@@ -378,29 +423,33 @@
         "reported_upgrade_height": 3543405,
         "consensus_branch_id": "37a5165b"
       },
-      "server_tip": 3533782,
-      "network_tip": 3533782,
+      "server_tip": 3533804,
+      "network_tip": null,
       "range": [
-        3533758,
-        3533781
+        3533780,
+        3533803
       ],
       "complete": "pass",
-      "current": "pass",
+      "current": "unverified",
       "nu7": "pass",
       "tally": {
         "blocks": 24,
-        "shielded_txs": 41,
-        "commitments": 92,
-        "nullifiers": 90
+        "shielded_txs": 66,
+        "commitments": 134,
+        "nullifiers": 116
       },
       "unverified_blocks": [],
       "mismatches": [],
-      "notes": []
+      "notes": [],
+      "exits": {
+        "exits": 3,
+        "matched": 3
+      }
     },
     {
       "server": "zec.0xrpc.io:443",
       "route": "tor",
-      "checked_at": 1793207756,
+      "checked_at": 1793209679,
       "info": {
         "software": "ZingoLabs ZainoD 0.10.1",
         "node": "Zebra:6.4.2",
@@ -408,31 +457,35 @@
         "reported_upgrade_height": 3428143,
         "consensus_branch_id": "37a5165b"
       },
-      "server_tip": 3533782,
-      "network_tip": 3533782,
+      "server_tip": 3533804,
+      "network_tip": null,
       "range": [
-        3533758,
-        3533781
+        3533780,
+        3533803
       ],
       "complete": "pass",
-      "current": "pass",
+      "current": "unverified",
       "nu7": "fail",
       "tally": {
         "blocks": 24,
-        "shielded_txs": 41,
-        "commitments": 92,
-        "nullifiers": 90
+        "shielded_txs": 66,
+        "commitments": 134,
+        "nullifiers": 116
       },
       "unverified_blocks": [],
       "mismatches": [],
       "notes": [
         "node runs Zebra 6.4.2; Zebra 7.0.0 is the first release that follows NU7 on mainnet"
-      ]
+      ],
+      "exits": {
+        "exits": 3,
+        "matched": 3
+      }
     },
     {
       "server": "z.ombie.cash:443",
       "route": "tor",
-      "checked_at": 1793207760,
+      "checked_at": 1793209690,
       "info": {
         "software": "ZingoLabs ZainoD 0.10.1",
         "node": "Zebra:7.0.0",
@@ -440,29 +493,37 @@
         "reported_upgrade_height": 3543405,
         "consensus_branch_id": "37a5165b"
       },
-      "server_tip": 3533782,
-      "network_tip": 3533782,
+      "server_tip": 3533805,
+      "network_tip": 3533805,
       "range": [
-        3533758,
-        3533781
+        3533781,
+        3533804
       ],
       "complete": "pass",
       "current": "pass",
       "nu7": "pass",
       "tally": {
-        "blocks": 24,
-        "shielded_txs": 41,
-        "commitments": 92,
-        "nullifiers": 90
+        "blocks": 23,
+        "shielded_txs": 65,
+        "commitments": 132,
+        "nullifiers": 114
       },
-      "unverified_blocks": [],
+      "unverified_blocks": [
+        3533804
+      ],
       "mismatches": [],
-      "notes": []
+      "notes": [
+        "1 of 24 blocks couldn't be verified: two peers didn't serve a matching block"
+      ],
+      "exits": {
+        "exits": 3,
+        "matched": 3
+      }
     },
     {
       "server": "lwd.bunny-zec.xyz:443",
       "route": "tor",
-      "checked_at": 1793207768,
+      "checked_at": 1793209701,
       "info": {
         "software": "ECC LightWalletD v0.5.5",
         "node": "Zebra:7.0.0",
@@ -470,29 +531,37 @@
         "reported_upgrade_height": 3543405,
         "consensus_branch_id": "37a5165b"
       },
-      "server_tip": 3533782,
-      "network_tip": 3533782,
+      "server_tip": 3533805,
+      "network_tip": 3533805,
       "range": [
-        3533758,
-        3533781
+        3533781,
+        3533804
       ],
       "complete": "pass",
       "current": "pass",
       "nu7": "pass",
       "tally": {
-        "blocks": 24,
-        "shielded_txs": 41,
-        "commitments": 92,
-        "nullifiers": 90
+        "blocks": 23,
+        "shielded_txs": 65,
+        "commitments": 132,
+        "nullifiers": 114
       },
-      "unverified_blocks": [],
+      "unverified_blocks": [
+        3533804
+      ],
       "mismatches": [],
-      "notes": []
+      "notes": [
+        "1 of 24 blocks couldn't be verified: two peers didn't serve a matching block"
+      ],
+      "exits": {
+        "exits": 3,
+        "matched": 3
+      }
     },
     {
       "server": "http://lwd.zcashexplorer.app:9067",
       "route": "tor",
-      "checked_at": 1793207773,
+      "checked_at": 1793209713,
       "info": {
         "software": "",
         "node": "",
@@ -521,7 +590,7 @@
     {
       "server": "http://zec.alexxiy.top:9067",
       "route": "tor",
-      "checked_at": 1793207774,
+      "checked_at": 1793209714,
       "info": {
         "software": "",
         "node": "",
@@ -551,7 +620,7 @@
   "test": {
     "server": "test server (one note removed)",
     "route": "test",
-    "checked_at": 1793207776,
+    "checked_at": 1793209715,
     "info": {
       "software": "ECC LightWalletD v0.5.3",
       "node": "Zakura:1.7.0",
@@ -559,32 +628,28 @@
       "reported_upgrade_height": 3543405,
       "consensus_branch_id": "37a5165b"
     },
-    "server_tip": 3533782,
-    "network_tip": 3533782,
+    "server_tip": 3533805,
+    "network_tip": 3533805,
     "range": [
-      3533758,
-      3533781
+      3533781,
+      3533804
     ],
-    "complete": "fail",
+    "complete": "pass",
     "current": "pass",
     "nu7": "pass",
     "tally": {
-      "blocks": 24,
-      "shielded_txs": 40,
-      "commitments": 90,
-      "nullifiers": 88
+      "blocks": 23,
+      "shielded_txs": 65,
+      "commitments": 132,
+      "nullifiers": 114
     },
-    "unverified_blocks": [],
-    "mismatches": [
-      {
-        "height": 3533781,
-        "txid": "9f4fd23c578a87ecd24aca4add9f3fefc05c7f1de660df08f92928aeaa7c24e6",
-        "tx_index": 2,
-        "what": "Ironwood actions: block has 2, server sent 1"
-      }
+    "unverified_blocks": [
+      3533804
     ],
+    "mismatches": [],
     "notes": [
-      "Test: dropped one Ironwood note from transaction 9f4fd23c578a87ecd24aca4add9f3fefc05c7f1de660df08f92928aeaa7c24e6 in block 3533781."
+      "Test: dropped one Ironwood note from transaction 25d1246c26550abd4b92371182993922e4863892d06df24b275fda281bab394f in block 3533804.",
+      "1 of 24 blocks couldn't be verified: two peers didn't serve a matching block"
     ],
     "consistency_only": {
       "status": "pass",
@@ -594,49 +659,53 @@
   "selftest": {
     "server": "zec.rocks:443",
     "report": {
-      "blocks": 24,
-      "tried": 1035,
-      "caught": 1035,
+      "blocks": 23,
+      "tried": 1503,
+      "caught": 1503,
       "by_kind": {
         "add a fake transaction": [
-          14,
-          14
+          18,
+          18
         ],
         "add a note": [
-          1,
-          1
+          12,
+          12
         ],
         "change a Sapling ciphertext": [
-          4,
-          4
+          48,
+          48
         ],
         "change a Sapling ephemeral key": [
-          4,
-          4
+          48,
+          48
         ],
         "change a Sapling note commitment": [
-          4,
-          4
+          48,
+          48
+        ],
+        "change a Sapling nullifier": [
+          12,
+          12
         ],
         "change a txid byte": [
-          82,
-          82
+          130,
+          130
         ],
         "change an Ironwood ciphertext": [
-          176,
-          176
+          212,
+          212
         ],
         "change an Ironwood ephemeral key": [
-          176,
-          176
+          212,
+          212
         ],
         "change an Ironwood note commitment": [
-          176,
-          176
+          212,
+          212
         ],
         "change an Ironwood nullifier": [
-          176,
-          176
+          212,
+          212
         ],
         "change an Orchard ciphertext": [
           4,
@@ -655,28 +724,32 @@
           4
         ],
         "drop a Sapling output": [
-          2,
-          2
+          24,
+          24
+        ],
+        "drop a Sapling spend": [
+          6,
+          6
         ],
         "drop a transaction": [
-          41,
-          41
+          65,
+          65
         ],
         "drop an Ironwood action": [
-          88,
-          88
+          106,
+          106
         ],
         "drop an Orchard action": [
           2,
           2
         ],
         "move a transaction": [
-          41,
-          41
+          65,
+          65
         ],
         "reorder notes": [
-          32,
-          32
+          55,
+          55
         ]
       },
       "missed": []
