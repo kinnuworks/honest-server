@@ -15,7 +15,7 @@ pub const NU7_HEIGHT: u64 = 3_543_405;
 const TIP_TOLERANCE: u64 = 3;
 /// Blocks a peer must also have before we compare them: skip the very tip,
 /// which may not have reached every peer yet.
-const TIP_MARGIN: u64 = 1;
+const TIP_MARGIN: u64 = 2;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "lowercase")]
@@ -404,9 +404,10 @@ pub async fn judge(r: &mut CheckResult, blocks: &[CompactBlock], reference: &mut
             _ => unverified.push(b.height),
         }
     }
+    // Pass only when every block in the window was verified and matched.
     r.complete = if !mismatches.is_empty() {
         Status::Fail
-    } else if tally.blocks == 0 {
+    } else if tally.blocks == 0 || !unverified.is_empty() {
         Status::Unverified
     } else {
         Status::Pass
@@ -514,6 +515,24 @@ pub async fn test_row(base: &str, route: &Route, window: u64, reference: &mut Re
         exits: None,
     };
     let blocks = fetch_server(base, route, window, &mut r).await.ok()?;
+    // Only alter blocks the reference has verified, so the change can be checked.
+    let wanted: Vec<(u64, [u8; 32])> = blocks
+        .iter()
+        .filter_map(|b| b.hash.as_slice().try_into().ok().map(|h| (b.height, h)))
+        .collect();
+    reference.fetch(&wanted).await;
+    let verified: Vec<CompactBlock> = blocks
+        .iter()
+        .filter(|b| {
+            <[u8; 32]>::try_from(b.hash.as_slice())
+                .map(|h| matches!(reference.cache.get(&h), Some(Some(_))))
+                .unwrap_or(false)
+        })
+        .cloned()
+        .collect();
+    if verified.len() < 2 || verified.len() != blocks.len() {
+        return None;
+    }
     let (altered, desc) = compare::drop_one_note(&blocks)?;
     r.notes.push(format!("Test: {desc}."));
     r.consistency_only = Some(match compare::consistency_only(&altered) {
