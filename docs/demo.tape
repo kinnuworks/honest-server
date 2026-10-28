@@ -1,7 +1,7 @@
 Output docs/demo.gif
 Set FontSize 15
-Set Width 1300
-Set Height 560
+Set Width 1400
+Set Height 800
 Set Padding 16
 Set TypingSpeed 35ms
 Set Shell "bash"

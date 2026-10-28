@@ -36,7 +36,7 @@ It forwards every call to the real server over Tor whenever a Tor proxy is runni
 REFUSED Honest Server refused block 3533812 from the server: transaction 1df0be5bbff4d19c...: Ironwood actions: block has 2, server sent 1
 ```
 
-Tested with a real wallet: Zingo's `zingo-cli` synced a fresh wallet through the proxy on mainnet, and with `--test-drop-note` the wallet stopped its sync with the proxy's refusal (block, transaction, "Ironwood actions: block has 2, server sent 1"). The full transcript, with how the wallet was built, is in [docs/wallet-demo.md](docs/wallet-demo.md).
+Tested with two real wallets on mainnet. ECC's `zcash-devtool`, a stock build that takes `-s 127.0.0.1:9067` as it is, synced a fresh wallet through the proxy over Tor; with `--test-drop-note` its sync stopped with the proxy's refusal ("Ironwood actions: block has 2, server sent 1"). Zingo's `zingo-cli` did the same, built with its test feature because its release forces the Nym mixnet. Both transcripts are in [docs/wallet-demo.md](docs/wallet-demo.md).
 
 While the wallet syncs, older blocks, outside the window, pass through unchecked unless you ask for spot checks: `--sample 50` checks about one in 50, chosen by a secret the proxy picks at start-up, so the server can't tell which of its blocks will be checked. It's off by default because peers would see which older heights you fetch (see Privacy).
 

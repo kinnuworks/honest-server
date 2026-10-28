@@ -139,11 +139,11 @@ honest-server check zec.rocks:443 --test-drop-note</code></pre>
     <p>Run a light-wallet server on your own machine and point your wallet at it. It forwards every call to the real server over Tor when Tor is running, so the server sees a Tor exit instead of your IP. Before it serves your wallet, it runs the full check once, the 2,000 earlier blocks included, and won't start if the server fails. Then it checks every block from the last 100 against verified blocks from Zcash peers as your wallet syncs, and refuses any block that doesn't match.</p>
     <pre class="cmd"><code>honest-server proxy zec.rocks:443
 # then set your wallet's server to http://127.0.0.1:9067</code></pre>
-    <p>Tested with a real wallet on mainnet. Zingo's command-line wallet synced through the proxy; with one note removed in test mode, its sync stopped with:</p>
-    <pre class="cmd"><code>error: Sync error.
-caused by: code: 'Unrecoverable data loss or corruption', message: "Honest Server refused block 3533810
-from the server: transaction 270445b41542b33b...: Ironwood actions: block has 2, server sent 1"</code></pre>
-    <p class="muted">Recorded Oct 28 2026 with zingo-cli from zingolib 8.0.0-rc.1, built with its test feature that skips the Nym mixnet so it could use a local server; it only synced. <a href="https://github.com/kinnuworks/honest-server/blob/master/docs/wallet-demo.md">Full transcript</a>.</p>
+    <p>Tested with ECC's command-line wallet, zcash-devtool, a stock build that takes a local server as it is. A fresh mainnet wallet synced through the proxy over Tor; with one note removed in test mode, its sync stopped with:</p>
+    <pre class="cmd"><code>zcash-devtool wallet -w ./w2 sync -s 127.0.0.1:9067
+Error: code: 'Unrecoverable data loss or corruption', message: "Honest Server refused block 3533929
+from the server: transaction a12a184366b6b6a1...: Ironwood actions: block has 2, server sent 1"</code></pre>
+    <p class="muted">Recorded Oct 28 2026 with zcash-devtool at commit 0b3436bb8d23; the wallets only synced. Zingo's zingo-cli did the same, built with its test feature because its release forces the Nym mixnet. <a href="https://github.com/kinnuworks/honest-server/blob/master/docs/wallet-demo.md">Both transcripts</a>.</p>
   </section>
 
   <section class="section page" id="privacy">

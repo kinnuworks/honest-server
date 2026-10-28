@@ -385,7 +385,15 @@ fn print_report(r: &CheckResult) {
     if let Some(h) = &r.history {
         let test = h.test_dropped_at.map(|b| format!(" (test: one note removed from block {b})")).unwrap_or_default();
         println!("  History   {}  blocks {}-{} through the note trees{test}", mark(h.status), h.from, h.to);
-        println!("                  {}", h.detail);
+        // One line per pool: "N earlier blocks ... trees. Sapling: ...; Orchard: ...".
+        match h.detail.split_once(". ") {
+            Some((_, pools)) => {
+                for p in pools.trim_end_matches('.').split("; ") {
+                    println!("                  {p}");
+                }
+            }
+            None => println!("                  {}", h.detail),
+        }
     }
     match r.network_tip {
         Some(t) => println!("  Current   {}  server tip {}, network tip {t}", mark(r.current), r.server_tip),
