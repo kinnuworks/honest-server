@@ -134,6 +134,12 @@ pub async fn tip(c: &mut Client) -> Result<(u64, Vec<u8>)> {
     Ok((b.height, b.hash))
 }
 
+/// The server's note commitment trees as of the end of block `height`, the
+/// call a wallet makes to start syncing from its birthday.
+pub async fn tree_state(c: &mut Client, height: u64) -> Result<rpc::TreeState> {
+    Ok(c.get_tree_state(rpc::BlockId { height, hash: vec![] }).await?.into_inner())
+}
+
 /// Compact blocks for `start..=end`, shielded pools only, the default request
 /// a wallet makes while syncing.
 pub async fn blocks(c: &mut Client, start: u64, end: u64) -> Result<Vec<CompactBlock>> {

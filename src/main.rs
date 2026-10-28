@@ -1,5 +1,6 @@
 mod check;
 mod compare;
+mod history;
 mod lwd;
 mod mutate;
 mod p2p;
@@ -28,6 +29,9 @@ enum Cmd {
         /// How many recent blocks to compare
         #[arg(long, default_value_t = 24)]
         blocks: u64,
+        /// How many blocks before those to check through the note trees (0 to skip)
+        #[arg(long, default_value_t = HISTORY_BLOCKS)]
+        history: u64,
         /// Reach the server through a Tor SOCKS proxy, e.g. 127.0.0.1:9050
         #[arg(long)]
         tor: Option<String>,
@@ -88,10 +92,16 @@ enum Cmd {
         history: Option<String>,
         #[arg(long, default_value_t = 24)]
         blocks: u64,
+        /// Blocks before the window to check through the note trees
+        #[arg(long, default_value_t = HISTORY_BLOCKS)]
+        history_blocks: u64,
         #[arg(long)]
         tor: Option<String>,
     },
 }
+
+/// Blocks before the window checked through the note trees, about 1.7 days.
+const HISTORY_BLOCKS: u64 = 2000;
 
 #[derive(serde::Serialize)]
 struct Table {
@@ -114,7 +124,7 @@ async fn main() -> Result<()> {
     let _ = rustls::crypto::ring::default_provider().install_default();
     let cli = Cli::parse();
     match cli.cmd {
-        Cmd::Check { server, blocks, tor, json, test_drop_note } => {
+        Cmd::Check { server, blocks, history, tor, json, test_drop_note } => {
             let blocks = clamp_window(blocks);
             let route = tor.map(Route::Tor).unwrap_or(Route::Direct);
             // Reach the server first, so a wrong address fails in seconds.
@@ -127,12 +137,12 @@ async fn main() -> Result<()> {
             let mut reference = Reference::new(4).await?;
             eprintln!("Checking {server}...");
             let r = if test_drop_note {
-                match check::test_row(&server, &route, blocks, &mut reference).await {
+                match check::test_row(&server, &route, blocks, history, &mut reference).await {
                     Some(r) => r,
                     None => anyhow::bail!("couldn't build the test: no shielded notes in the window"),
                 }
             } else {
-                check::check(&server, &route, blocks, &mut reference).await
+                check::check(&server, &route, blocks, history, &mut reference).await
             };
             if json {
                 println!("{}", serde_json::to_string_pretty(&r)?);
@@ -219,7 +229,7 @@ async fn main() -> Result<()> {
             }
             println!("{} peers answered", all.len());
         }
-        Cmd::Table { servers, out, blocks, tor, history } => {
+        Cmd::Table { servers, out, blocks, history_blocks, tor, history } => {
             let route = tor.map(Route::Tor).unwrap_or(Route::Direct);
             let list: Vec<String> = std::fs::read_to_string(&servers)?
                 .lines()
@@ -230,7 +240,7 @@ async fn main() -> Result<()> {
             let mut results = Vec::new();
             for s in &list {
                 eprintln!("Checking {s}...");
-                let r = check::check(s, &route, blocks, &mut reference).await;
+                let r = check::check(s, &route, blocks, history_blocks, &mut reference).await;
                 print_report(&r);
                 results.push(r);
             }
@@ -239,7 +249,7 @@ async fn main() -> Result<()> {
                 .find(|r| r.complete == Status::Pass)
                 .map(|r| r.server.clone());
             let test = match &base {
-                Some(b) => check::test_row(b, &route, blocks, &mut reference).await,
+                Some(b) => check::test_row(b, &route, blocks, history_blocks, &mut reference).await,
                 None => None,
             };
             let selftest = match &base {
@@ -355,6 +365,11 @@ fn print_report(r: &CheckResult) {
     }
     if let Some(x) = &r.exits {
         println!("  Exits     {} of {} Tor exits got blocks that match the verified ones", x.matched, x.exits);
+    }
+    if let Some(h) = &r.history {
+        let test = h.test_dropped_at.map(|b| format!(" (test: one note removed from block {b})")).unwrap_or_default();
+        println!("  History   {}  blocks {}-{} through the note trees{test}", mark(h.status), h.from, h.to);
+        println!("                  {}", h.detail);
     }
     match r.network_tip {
         Some(t) => println!("  Current   {}  server tip {}, network tip {t}", mark(r.current), r.server_tip),

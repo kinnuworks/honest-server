@@ -69,6 +69,11 @@ pub struct ShieldedTx {
     pub sapling_outputs: Vec<NoteData>,
     pub orchard_actions: Vec<ActionData>,
     pub ironwood_actions: Vec<ActionData>,
+    /// Tree roots this transaction's spends are proved against. Consensus
+    /// requires each one to be the root of the real tree after some earlier block.
+    pub sapling_anchors: Vec<[u8; 32]>,
+    pub orchard_anchor: Option<[u8; 32]>,
+    pub ironwood_anchor: Option<[u8; 32]>,
 }
 
 impl ShieldedTx {
@@ -146,6 +151,10 @@ fn extract(index: usize, txid: [u8; 32], tx: &Transaction) -> ShieldedTx {
     if let Some(b) = tx.sapling_bundle() {
         for s in b.shielded_spends() {
             out.sapling_nullifiers.push(s.nullifier().0);
+            let anchor = sapling_crypto::Node::from_scalar(*s.anchor()).to_bytes();
+            if !out.sapling_anchors.contains(&anchor) {
+                out.sapling_anchors.push(anchor);
+            }
         }
         for o in b.shielded_outputs() {
             out.sapling_outputs.push(NoteData {
@@ -169,9 +178,11 @@ fn extract(index: usize, txid: [u8; 32], tx: &Transaction) -> ShieldedTx {
     };
     if let Some(b) = tx.orchard_bundle() {
         out.orchard_actions = actions(b);
+        out.orchard_anchor = Some(b.anchor().to_bytes());
     }
     if let Some(b) = tx.ironwood_bundle() {
         out.ironwood_actions = actions(b);
+        out.ironwood_anchor = Some(b.anchor().to_bytes());
     }
     out
 }
@@ -359,6 +370,14 @@ mod tests {
     /// commitments, keys, ciphertexts) but not to its signatures and proofs,
     /// which the header commits to through the chain history root. So a flipped
     /// bit may pass only if every field the comparison uses is unchanged.
+    /// The fields a txid commits to. Anchors are left out: from v6 on they are
+    /// authorizing data, so two peers must agree on them instead.
+    fn effects(txs: &[ShieldedTx]) -> Vec<ShieldedTx> {
+        txs.iter()
+            .map(|t| ShieldedTx { sapling_anchors: vec![], orchard_anchor: None, ironwood_anchor: None, ..t.clone() })
+            .collect()
+    }
+
     #[test]
     fn random_bit_flips_never_change_the_compared_fields_unnoticed() {
         let hash = hash_of(BLOCK_3533761);
@@ -372,7 +391,7 @@ mod tests {
             match verify_block(&raw, &hash, 3_533_761) {
                 Err(_) => rejected += 1,
                 Ok(b) => {
-                    assert_eq!(b.txs, honest.txs, "byte {i} changed a compared field and was accepted");
+                    assert_eq!(effects(&b.txs), effects(&honest.txs), "byte {i} changed a compared field and was accepted");
                     auth_only += 1;
                 }
             }

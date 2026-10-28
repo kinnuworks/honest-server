@@ -53,6 +53,9 @@ pub struct CheckResult {
     /// Over Tor: how many separate exits got blocks that matched the verified ones.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub exits: Option<ExitCheck>,
+    /// The blocks before the window, checked through the note trees.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub history: Option<crate::history::HistoryCheck>,
     /// Only for the test row: what a consistency-only check says.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub consistency_only: Option<ConsistencyResult>,
@@ -109,6 +112,11 @@ impl Reference {
             Some(Some((full, _))) => Some(compare::compare_block(full, b, &mut Tally::default())),
             _ => None,
         }
+    }
+
+    /// The verified full block with this hash, if the reference has one.
+    pub fn verified(&self, hash: &[u8; 32]) -> Option<&VerifiedBlock> {
+        self.cache.get(hash).and_then(|c| c.as_ref()).map(|(b, _)| b)
     }
 
     pub fn peer_summary(&self) -> Vec<String> {
@@ -210,12 +218,21 @@ impl Reference {
                         continue;
                     }
                     match verify::verify_block(&raw, hash, *height as u32) {
-                        Ok(vb) => {
-                            e.1.push(from);
-                            if e.0.is_none() {
+                        // The second peer must send the same fields, anchors
+                        // included: from v6 on, anchors are authorizing data,
+                        // which the txids don't commit to.
+                        Ok(vb) => match &e.0 {
+                            None => {
                                 e.0 = Some(vb);
+                                e.1.push(from);
                             }
-                        }
+                            Some(first) if first.txs == vb.txs && first.header == vb.header => e.1.push(from),
+                            Some(_) => {
+                                if std::env::var_os("HONEST_DEBUG").is_some() {
+                                    eprintln!("block {height} from {from} disagrees with the first peer's copy");
+                                }
+                            }
+                        },
                         Err(err) => {
                             if std::env::var_os("HONEST_DEBUG").is_some() {
                                 eprintln!("block {height} from {from} rejected: {err:#}");
@@ -318,8 +335,9 @@ fn now() -> u64 {
         .unwrap_or(0)
 }
 
-/// Runs the full check against `server`, comparing `window` recent blocks.
-pub async fn check(server: &str, route: &Route, window: u64, reference: &mut Reference) -> CheckResult {
+/// Runs the full check against `server`, comparing `window` recent blocks and
+/// checking `history` blocks before them through the note trees.
+pub async fn check(server: &str, route: &Route, window: u64, history: u64, reference: &mut Reference) -> CheckResult {
     let mut r = CheckResult {
         server: server.to_string(),
         route: match route {
@@ -340,6 +358,7 @@ pub async fn check(server: &str, route: &Route, window: u64, reference: &mut Ref
         notes: vec![],
         consistency_only: None,
         exits: None,
+        history: None,
     };
     let blocks = match fetch_server(server, route, window, &mut r).await {
         Ok(b) => b,
@@ -351,6 +370,18 @@ pub async fn check(server: &str, route: &Route, window: u64, reference: &mut Ref
     judge(&mut r, &blocks, reference).await;
     if let (Route::Tor(_), Some((start, end))) = (route, r.range) {
         cross_check_exits(&mut r, server, route, start, end, reference).await;
+    }
+    // The history check builds on the verified window, so it runs only when
+    // every block in the window matched.
+    if history > 0 && r.complete == Status::Pass {
+        let h = crate::history::check(server, route, &blocks, reference, history, false).await;
+        if h.status == Status::Fail {
+            r.complete = Status::Fail;
+            r.notes.push(format!("Older blocks: {}", h.detail));
+        } else if h.status == Status::Unverified {
+            r.notes.push(format!("Older blocks: {}", h.detail));
+        }
+        r.history = Some(h);
     }
     r
 }
@@ -541,7 +572,7 @@ fn nu7_status(r: &CheckResult) -> (Status, Option<String>) {
 
 /// The labelled test row: real data from `base`, with one shielded note
 /// removed and the tree sizes patched so the chain still adds up.
-pub async fn test_row(base: &str, route: &Route, window: u64, reference: &mut Reference) -> Option<CheckResult> {
+pub async fn test_row(base: &str, route: &Route, window: u64, history: u64, reference: &mut Reference) -> Option<CheckResult> {
     let mut r = CheckResult {
         server: format!("test server (real data from {base}, one note removed)"),
         route: "test".into(),
@@ -559,6 +590,7 @@ pub async fn test_row(base: &str, route: &Route, window: u64, reference: &mut Re
         notes: vec![],
         consistency_only: None,
         exits: None,
+        history: None,
     };
     let blocks = fetch_server(base, route, window, &mut r).await.ok()?;
     // Only alter blocks the reference has verified, so the change can be checked.
@@ -586,6 +618,11 @@ pub async fn test_row(base: &str, route: &Route, window: u64, reference: &mut Re
         Err(e) => ConsistencyResult { status: Status::Fail, detail: e },
     });
     judge(&mut r, &altered, reference).await;
+    // The same lie further back: one note removed from the blocks before the
+    // window, which only the history check can see.
+    if history > 0 {
+        r.history = Some(crate::history::check(base, route, &blocks, reference, history, true).await);
+    }
     r.server = "test server (one note removed)".into();
     Some(r)
 }
@@ -628,6 +665,7 @@ fn blank(server: &str) -> CheckResult {
         notes: vec![],
         consistency_only: None,
         exits: None,
+        history: None,
     }
 }
 
