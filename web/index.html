@@ -136,7 +136,7 @@ honest-server check zec.rocks:443 --test-drop-note</code></pre>
 
   <section class="section page" id="protect">
     <h2>Protect your wallet</h2>
-    <p>Run a light-wallet server on your own machine and point your wallet at it. It forwards every call to the real server over Tor when Tor is running, so the server sees a Tor exit instead of your IP. It checks every recent block, and a random sample of older ones, against verified blocks from Zcash peers, and refuses any block that doesn't match.</p>
+    <p>Run a light-wallet server on your own machine and point your wallet at it. It forwards every call to the real server over Tor when Tor is running, so the server sees a Tor exit instead of your IP. Before it serves your wallet, it runs the full check once, the 2,000 earlier blocks included, and won't start if the server fails. Then it checks every block from the last 100 against verified blocks from Zcash peers as your wallet syncs, and refuses any block that doesn't match.</p>
     <pre class="cmd"><code>honest-server proxy zec.rocks:443
 # then set your wallet's server to http://127.0.0.1:9067</code></pre>
     <p>Tested with a real wallet on mainnet. Zingo's command-line wallet synced through the proxy; with one note removed in test mode, its sync stopped with:</p>
@@ -146,16 +146,22 @@ from the server: transaction 270445b41542b33b...: Ironwood actions: block has 2,
     <p class="muted">Recorded Oct 28 2026 with zingo-cli from zingolib 8.0.0-rc.1, built with its test feature that skips the Nym mixnet so it could use a local server; it only synced. <a href="https://github.com/kinnuworks/honest-server/blob/master/docs/wallet-demo.md">Full transcript</a>.</p>
   </section>
 
+  <section class="section page" id="privacy">
+    <h2>Why this is about privacy</h2>
+    <p>A light wallet lets you skip running a full node, and pays for it with trust. The server sees your IP and every request your wallet makes, and it decides which notes your wallet gets to see. Honest Server takes the second part away. The check and the proxy reach the server through Tor, so it sees an exit and not you, and three exits have to get the same answer, so a server can't quietly show one user a different chain. Nothing goes to us, and it needs no keys.</p>
+  </section>
+
   <section class="section page" id="how">
     <h2>How it works</h2>
     <ol class="how">
       <li>It reads the server's info, its latest block and a range of recent blocks, the same calls a wallet makes when it syncs.</li>
       <li>It fetches the same blocks from Zcash peer-to-peer nodes and checks each one: Equihash proof of work, the difficulty target, the merkle root over the transaction IDs and the height in the coinbase. Two peers have to serve the same block.</li>
       <li>It compares every Sapling spend and output and every Orchard and Ironwood action, by transaction and position: nullifiers, note commitments, ephemeral keys and the first 52 bytes of each ciphertext.</li>
+      <li>For the 2,000 blocks before that window, it rebuilds the Sapling, Orchard and Ironwood note commitment trees from the server's own notes, starting from the server's tree state. The rebuilt root has to equal the server's own tree state at the end, and a match with an anchor that a transaction in the verified blocks proves its spends against shows the whole range is real. One note left out anywhere in those blocks changes every later root.</li>
       <li>It walks the peers' headers forward from the server's last block to see whether the server is behind or on a fork, and reads which node release the server runs.</li>
     </ol>
     <h2>What it can't see</h2>
-    <p>It checks a window of recent blocks, not the whole chain. It can't see what a server logs about the wallets that connect to it, and it doesn't test transaction submission. When it can't reach a server or two peers can't confirm a block, it says "couldn't verify" and doesn't count that as a failure.</p>
+    <p>It compares a window of recent blocks field by field. For the 2,000 blocks before that, the note trees catch a note left out, added or changed, but not a changed nullifier or ciphertext, and blocks older than that aren't checked. From transaction version 6, anchors are authorizing data that the txids don't commit to, so two peers have to agree on them. It can't see what a server logs about the wallets that connect to it, and it doesn't test transaction submission. When it can't reach a server or two peers can't confirm a block, it says "couldn't verify" and doesn't count that as a failure.</p>
     <p class="foot">Zebra 6.4 nodes stop at block 3,540,768. NU7 activates at block 3,543,405. Servers whose node isn't upgraded will stop or fork off around then.</p>
   </section>
 </main>
@@ -180,6 +186,7 @@ function notes(r) {
 function facts(r) {
   const t = r.tally, bits = [];
   if (r.range) bits.push(`${n(r.range[1] - r.range[0] + 1)} blocks, ${n(t.shielded_txs)} shielded txs, ${n(t.commitments)} commitments`);
+  if (r.history && r.history.status === "pass") bits.push(`${n(r.history.to - r.history.from + 1)} earlier blocks through the note trees`);
   if (r.exits) bits.push(`same blocks through ${r.exits.matched} of ${r.exits.exits} Tor exits`);
   if (r.info.node) bits.push(esc(r.info.node));
   return bits.length ? `<span class="note">${bits.join(" · ")}</span>` : "";
@@ -211,19 +218,24 @@ function units(x, m) {
     <div class="units-legend"><span>${b - a + 1} blocks checked against full blocks from Zcash peers</span>${m ? `<span>1 mismatch at block ${n(m.height)}</span>` : ""}</div>`;
 }
 
+// The pool sentence from the history check that names the contradiction.
+const holdLie = h => (h.detail.split("; ").find(p => /don't rebuild/.test(p)) || h.detail).replace(/^\d[\d,]* earlier blocks \([^)]*\) checked through the note trees\. /, "").replace(/\.$/, "").replace(/\b\d{7}\b/g, x => n(x));
+
 function renderTest(t) {
   const x = t.test;
   if (!x) { $("test-body").innerHTML = `<div class="ui-state"><p class="ui-state__body">No test row in this run.</p></div>`; return; }
   const m = x.mismatches[0];
+  const h = x.history;
   const s = t.selftest && t.selftest.report;
   $("test-body").innerHTML = `
-    <p>This simulated server sends real blocks from a public server with one shielded note removed (from Ironwood, Sapling or Orchard, Zcash's shielded pools), and patches the note commitment tree sizes to match. It is a test row, not a real server.</p>
+    <p>This simulated server sends real blocks from a public server with one shielded note removed (from Ironwood, Sapling or Orchard, Zcash's shielded pools), and patches the note commitment tree sizes to match. The last row removes a note from an older block instead, outside the window of blocks fetched from peers. It is a test row, not a real server.</p>
     ${units(x, m)}
     <div class="ui-table-wrap"><table class="ui-table verdicts">
       <thead><tr><th>Check</th><th>Verdict</th><th>What it saw</th></tr></thead>
       <tbody>
         <tr data-reveal style="--i:25"><td>A check that only looks at the server's own answers</td><td>${x.consistency_only.status === "pass" ? '<span class="ui-pill ui-pill--ok">Looks fine</span>' : pill(x.consistency_only.status)}</td><td>${esc(x.consistency_only.detail)}</td></tr>
         <tr data-reveal style="--i:26" class="caught"><td><strong>Honest Server</strong></td><td>${x.complete === "fail" ? '<span class="ui-pill ui-pill--bad">Lie caught</span>' : pill(x.complete)}</td><td class="evidence">${m ? `<a href="https://3xpl.com/zcash/block/${m.height}">Block ${n(m.height)}</a>, transaction ${esc(m.txid.slice(0, 16))}...: <strong>${esc(m.what)}</strong>` : ""}</td></tr>
+        ${h && h.test_dropped_at ? `<tr data-reveal style="--i:27"><td>Honest Server, with the note removed ${n(h.to - h.test_dropped_at + 1)} blocks earlier, outside the window</td><td>${h.status === "fail" ? '<span class="ui-pill ui-pill--bad">Lie caught</span>' : pill(h.status)}</td><td class="evidence"><a href="https://3xpl.com/zcash/block/${h.test_dropped_at}">Block ${n(h.test_dropped_at)}</a>: <strong>${esc(holdLie(h))}</strong></td></tr>` : ""}
       </tbody>
     </table></div>
     ${s ? `<p class="muted">Self-test on the same live data: ${n(s.tried)} single changes to ${n(s.blocks)} real blocks (a flipped byte in every nullifier, note commitment, ephemeral key, ciphertext and txid; every note and transaction dropped, moved or reordered; fake notes and transactions added). ${n(s.caught)} caught.</p>` : ""}`;
@@ -265,7 +277,8 @@ function renderServers(t) {
   }
   const lie = count("complete", "fail") ? "" : ` No server was caught lying in this run. <a href="#lie">Fig. 2</a> shows what a caught lie looks like.`;
   $("summary").innerHTML = `<strong>${parts.join(". ")}.</strong>${lie} Last checked ${when(t.generated_at)}.`;
-  $("status").textContent = `${S.length} servers · ${t.blocks_per_check} recent blocks each · over Tor`;
+  const deep = S.find(r => r.history);
+  $("status").textContent = `${S.length} servers · ${t.blocks_per_check} recent blocks each${deep ? `, ${n(deep.history.to - deep.history.from + 1)} more through the note trees` : ""} · over Tor`;
   const bad = r => r.complete === "fail" || r.current === "fail" || r.nu7 === "fail";
   const shown = [...S.filter(r => r.range && bad(r)), ...S.filter(r => r.range && !bad(r))];
   const unreachable = S.filter(r => !r.range);

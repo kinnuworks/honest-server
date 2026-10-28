@@ -60,6 +60,10 @@ enum Cmd {
         /// Check every block within this many blocks of the tip
         #[arg(long, default_value_t = 100)]
         window: u64,
+        /// At start-up, check this many blocks before the recent ones through
+        /// the note trees (0 to skip)
+        #[arg(long, default_value_t = HISTORY_BLOCKS)]
+        history: u64,
         /// Also check older blocks at random, about one in this many (off by
         /// default: peers would see which older heights the wallet syncs)
         #[arg(long, default_value_t = 0)]
@@ -172,7 +176,7 @@ async fn main() -> Result<()> {
                 None => anyhow::bail!("couldn't get verified blocks from {server}"),
             }
         }
-        Cmd::Proxy { server, listen, tor, direct, window, sample, strict, test_drop_note } => {
+        Cmd::Proxy { server, listen, tor, direct, window, history, sample, strict, test_drop_note } => {
             // Tor by default: use the given proxy, or a local Tor if one is running.
             let route = if direct {
                 Route::Direct
@@ -197,7 +201,19 @@ async fn main() -> Result<()> {
                 }
             };
             eprintln!("Connecting to Zcash peers...");
-            let reference = Reference::new(4).await?;
+            let mut reference = Reference::new(4).await?;
+            // Before serving the wallet, run the full check once, history
+            // included, the same way. Over Tor the server can't tell this
+            // check apart from the wallet's own calls.
+            if history > 0 {
+                eprintln!("Checking {server} before serving your wallet ({} recent blocks, {history} before them through the note trees)...", clamp_window(24));
+                let r = check::check(&server, &route, clamp_window(24), history, &mut reference).await;
+                print_report(&r);
+                if r.complete == Status::Fail {
+                    eprintln!("Not starting: {server} failed the check above. Pick another server.");
+                    std::process::exit(1);
+                }
+            }
             let addr: std::net::SocketAddr = listen.parse()?;
             eprintln!(
                 "Light-wallet server on http://{addr}, forwarding to {server} ({}). Every block in the last {window} is checked against Zcash peers.",
